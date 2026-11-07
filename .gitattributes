@@ -1,0 +1,18 @@
+# Normalize source text; shell launchers must remain usable on Unix.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.sh text eol=lf
+*.command text eol=lf
+
+# Source-controlled product assets are binary.
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.jar binary
+
+# Keep upstream license notice whitespace as supplied.
+/licenses/** -whitespace
