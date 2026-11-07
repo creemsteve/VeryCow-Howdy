@@ -1,7 +1,8 @@
+param([string]$Destination='releases/v0.1.3')
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 Set-Location $root
-$portable=Join-Path $root 'releases/v0.1.2/VCH-Portable'
+$portable=Join-Path (Join-Path $root $Destination) 'VCH-Portable'
 New-Item -ItemType Directory -Force $portable | Out-Null
 Copy-Item build/app/* $portable -Recurse -Force
 $launchClient = '#!/usr/bin/env sh' + "`n" + 'cd "$(dirname "$0")"' + "`n" + 'exec java --add-modules jdk.httpserver -Xmx1024m -cp "./*" chat.vch.ClientApp' + "`n"
@@ -14,4 +15,4 @@ $launchDaemon = $launchClient.Replace('chat.vch.ClientApp','chat.vch.ServerDaemo
 [IO.File]::WriteAllText((Join-Path $portable 'Server.command'),$launchServer)
 Copy-Item README.md,docs/SECURITY.md,docs/VOICE.md,docs/THIRD-PARTY.md $portable -Force
 Copy-Item licenses (Join-Path $portable 'licenses') -Recurse -Force
-Write-Host 'Portable desktop build: releases/v0.1.2/VCH-Portable (Java 17+ required)'
+Write-Host "Portable desktop build: $Destination/VCH-Portable (Java 17+ required)"

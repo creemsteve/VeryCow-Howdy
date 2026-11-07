@@ -15,6 +15,13 @@ PACKAGES = {
     "kotlin-stdlib-2.4.0.jar": "org/jetbrains/kotlin/kotlin-stdlib/2.4.0/kotlin-stdlib-2.4.0.jar",
     "onnxruntime-1.23.2.jar": "com/microsoft/onnxruntime/onnxruntime/1.23.2/onnxruntime-1.23.2.jar",
     "webp-imageio-0.11.0.jar": "com/github/usefulness/webp-imageio/0.11.0/webp-imageio-0.11.0.jar",
+    "webrtc-java-0.19.0.jar": "dev/onvoid/webrtc/webrtc-java/0.19.0/webrtc-java-0.19.0.jar",
+    "webrtc-java-0.19.0-windows-x86_64.jar": "dev/onvoid/webrtc/webrtc-java/0.19.0/webrtc-java-0.19.0-windows-x86_64.jar",
+    "webrtc-java-0.19.0-windows-aarch64.jar": "dev/onvoid/webrtc/webrtc-java/0.19.0/webrtc-java-0.19.0-windows-aarch64.jar",
+    "webrtc-java-0.19.0-linux-x86_64.jar": "dev/onvoid/webrtc/webrtc-java/0.19.0/webrtc-java-0.19.0-linux-x86_64.jar",
+    "webrtc-java-0.19.0-linux-aarch64.jar": "dev/onvoid/webrtc/webrtc-java/0.19.0/webrtc-java-0.19.0-linux-aarch64.jar",
+    "webrtc-java-0.19.0-macos-x86_64.jar": "dev/onvoid/webrtc/webrtc-java/0.19.0/webrtc-java-0.19.0-macos-x86_64.jar",
+    "webrtc-java-0.19.0-macos-aarch64.jar": "dev/onvoid/webrtc/webrtc-java/0.19.0/webrtc-java-0.19.0-macos-aarch64.jar",
 }
 
 

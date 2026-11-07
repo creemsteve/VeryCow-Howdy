@@ -70,13 +70,14 @@ public final class ServerApp extends JFrame {
         JPanel root=Theme.panel(new BorderLayout(12,12)); JList<String> list=new JList<>(accounts),banList=new JList<>(bans);
         JSplitPane split=new JSplitPane(JSplitPane.VERTICAL_SPLIT,new JScrollPane(list),new JScrollPane(banList));split.setResizeWeight(.6);root.add(split);
         JPanel buttons=new JPanel(new FlowLayout(FlowLayout.LEFT));
+        buttons.add(Theme.button("Toggle administrator",() -> {String value=list.getSelectedValue();if(value!=null)run(() -> {String hash=value.split("  ")[0]; synchronized(server){if(!server.state.admins.remove(hash))server.state.admins.add(hash);server.save();}refresh();});}));
         buttons.add(Theme.button("Ban account hash",() -> {String value=JOptionPane.showInputDialog(this,"Full account hash",list.getSelectedValue()==null?"":list.getSelectedValue().split("  ")[0]);if(value!=null)run(() -> {if(!value.matches("[a-f0-9]{64}"))throw new Exception("Enter a full account hash");server.ban(value,false);refresh();});}));
         buttons.add(Theme.button("Ban IP address",() -> {String value=JOptionPane.showInputDialog(this,"Exact IPv4 or IPv6 address");if(value!=null)run(() -> {if(!value.matches("[0-9a-fA-F:.]+"))throw new Exception("Enter a literal IP address");server.ban(java.net.InetAddress.getByName(value).getHostAddress(),true);refresh();});}));
         buttons.add(Theme.button("Remove selected ban",() -> {String selected=banList.getSelectedValue();if(selected!=null)run(() -> {synchronized(server){(selected.startsWith("IP  ")?server.state.bannedIps:server.state.bannedHashes).remove(selected.substring(selected.indexOf("  ")+2));server.save();}refresh();});}));
         root.add(buttons,BorderLayout.SOUTH);return root;
     }
     private void refreshChannels(){Channel c=channelList.getSelectedValue();channels.clear();synchronized(server){server.state.channels.forEach(channels::addElement);}if(c!=null)channelList.setSelectedValue(c,true);}
-    private void refresh(){synchronized(server){accounts.clear();server.state.accounts.values().stream().sorted(Comparator.comparing(a->a.name)).forEach(a->accounts.addElement(a.hash+"  "+a.name));bans.clear();server.state.bannedIps.forEach(b->bans.addElement("IP  "+b));server.state.bannedHashes.forEach(b->bans.addElement("HASH  "+b));}if(channels.isEmpty())refreshChannels();}
+    private void refresh(){synchronized(server){accounts.clear();server.state.accounts.values().stream().sorted(Comparator.comparing(a->a.name)).forEach(a->accounts.addElement(a.hash+"  "+a.name+(server.state.admins.contains(a.hash)?" (admin)":"")));bans.clear();server.state.bannedIps.forEach(b->bans.addElement("IP  "+b));server.state.bannedHashes.forEach(b->bans.addElement("HASH  "+b));}if(channels.isEmpty())refreshChannels();}
     private interface Task { void run() throws Exception; }
     private void run(Task task){try{task.run();}catch(Exception e){Theme.error(this,e);}}
 }

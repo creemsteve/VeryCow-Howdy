@@ -10,6 +10,8 @@ import java.util.*;
 public final class ClientCore implements AutoCloseable {
     public final ClientState state;
     private final Vault vault;
+    public final Map<String,Map<String,String>> typing = new HashMap<>();
+    public final Map<String,List<CallInvite>> incomingCalls = new HashMap<>();
     private final Map<String,String> tokens = new HashMap<>();
     private final Map<String,SSLSocketFactory> tls = new HashMap<>();
     public ClientCore(Vault vault) throws Exception {
@@ -81,12 +83,24 @@ public final class ClientCore implements AutoCloseable {
     }
     public synchronized boolean connected(SavedServer s) { return tokens.containsKey(s.id); }
     public synchronized void disconnect(SavedServer s) { tokens.remove(s.id); }
-    public synchronized void updateProfile(SavedServer s) throws Exception { request(s,"profile",Json.obj("name",state.name,"bio",state.bio,"avatar",state.avatar),true); }
+    public synchronized void updateProfile(SavedServer s) throws Exception { request(s,"profile",Json.obj("name",state.name,"bio",state.bio,"avatar",state.avatar,"pronouns",state.pronouns),true); }
     public synchronized boolean poll(SavedServer s) throws Exception {
         JsonObject r = request(s,"poll",Json.obj("after",s.lastSequence),true);
         String before = Json.GSON.toJson(s);
+        Map<String,String> active = new HashMap<>();
+        if (r.has("typing")) r.getAsJsonObject("typing").entrySet().forEach(e -> active.put(e.getKey(),e.getValue().getAsString()));
+        boolean typingChanged = !active.equals(typing.put(s.id,active));
+        List<CallInvite> calls = r.has("calls") ? Arrays.asList(Json.GSON.fromJson(r.get("calls"),CallInvite[].class)) : List.of();
+        boolean callsChanged = !Json.GSON.toJson(calls).equals(Json.GSON.toJson(incomingCalls.put(s.id,calls)));
         s.name = Json.str(r,"name");
+        s.description = Json.str(r,"description"); s.image = Json.str(r,"image"); s.admin = r.has("admin") && r.get("admin").getAsBoolean();
+        s.roleManager = r.has("roleManager") && r.get("roleManager").getAsBoolean();
         s.channels = new ArrayList<>(Arrays.asList(Json.GSON.fromJson(r.get("channels"),Channel[].class)));
+        s.friendships = r.has("friendships") ? new ArrayList<>(Arrays.asList(Json.GSON.fromJson(r.get("friendships"),Friendship[].class))) : new ArrayList<>();
+        s.friendRequests = r.has("friendRequests") ? new HashSet<>(Arrays.asList(Json.GSON.fromJson(r.get("friendRequests"),String[].class))) : new HashSet<>();
+        s.adminChannels = r.has("adminChannels") ? new ArrayList<>(Arrays.asList(Json.GSON.fromJson(r.get("adminChannels"),Channel[].class))) : new ArrayList<>();
+        s.roles = r.has("roles") ? new ArrayList<>(Arrays.asList(Json.GSON.fromJson(r.get("roles"),Role[].class))) : new ArrayList<>();
+        s.everyonePermissions = r.has("everyonePermissions") ? new HashSet<>(Arrays.asList(Json.GSON.fromJson(r.get("everyonePermissions"),String[].class))) : new HashSet<>();
         Map<String,Account> accounts = new HashMap<>();
         for (var entry : r.getAsJsonObject("accounts").entrySet()) {
             Account a = Json.GSON.fromJson(entry.getValue(),Account.class);
@@ -100,7 +114,7 @@ public final class ClientCore implements AutoCloseable {
         }
         s.accounts = accounts; s.lastSequence = Json.num(r,"cursor",s.lastSequence);
         applyChannelKeys(s,r.getAsJsonObject("channelKeys"));
-        boolean changed = !before.equals(Json.GSON.toJson(s)); if (changed) save(); return changed;
+        boolean changed = !before.equals(Json.GSON.toJson(s)); if (changed) save(); return changed || typingChanged || callsChanged;
     }
     private static String validatedKey(String key)throws IOException{
         try{byte[] bytes=Crypto.unb64(key);if(bytes.length!=32)throw new IOException("Invalid server channel encryption key");return Crypto.b64(bytes);}
@@ -137,9 +151,10 @@ public final class ClientCore implements AutoCloseable {
         e.cipher = Crypto.b64(Crypto.seal(Crypto.unb64(key),Crypto.compress(plain),e.aad())); e.signature = Crypto.sign(Crypto.privateKey(state.privateKey),e.signedBytes()); return e;
     }
     public synchronized void send(SavedServer s, Channel c, String kind, byte[] bytes) throws Exception {
-        if (!c.type.equals("text") || !(kind.equals("text") || kind.equals("image"))) throw new IOException("Text channel required");
+        if (!c.type.equals("text") || !(kind.equals("text") || kind.equals("image") || kind.equals("images"))) throw new IOException("Text channel required");
         if (kind.equals("text") && (bytes.length == 0 || bytes.length > 16000)) throw new IOException("Text limit is 16,000 UTF-8 bytes");
         if (kind.equals("image") && (bytes.length > 100000 || !MediaRules.isWebp(bytes))) throw new IOException("Images must be WebP, at most 100,000 bytes");
+        if (kind.equals("images") && bytes.length > 425000) throw new IOException("Image collection is too large");
         for(int attempt=0;;attempt++){
             Envelope e = envelope(s,c.id,kind,bytes);
             try{request(s,"send",Json.GSON.toJsonTree(e).getAsJsonObject(),true);break;}
@@ -152,7 +167,7 @@ public final class ClientCore implements AutoCloseable {
         if (!s.id.equals(e.server) || a == null || !Crypto.account(s.id,a.publicKey).equals(e.author) || !Crypto.verify(a.publicKey,e.signedBytes(),e.signature)) throw new IOException("Signature verification failed");
         String key = s.channelKeys.get(e.channel); if (key == null) throw new IOException("Channel key needed");
         List<String> candidates=new ArrayList<>();candidates.add(key);candidates.addAll(s.previousChannelKeys.getOrDefault(e.channel,List.of()));
-        for(String candidate:candidates)try{return Crypto.decompress(Crypto.open(Crypto.unb64(candidate),Crypto.unb64(e.cipher),e.aad()),e.kind.equals("image") ? 100000 : e.kind.equals("voice") ? 32000 : 16000);}catch(javax.crypto.AEADBadTagException wrongKey){}
+        for(String candidate:candidates)try{return Crypto.decompress(Crypto.open(Crypto.unb64(candidate),Crypto.unb64(e.cipher),e.aad()),e.kind.equals("images") ? 425000 : e.kind.equals("image") ? 100000 : e.kind.equals("voice") ? 32000 : 16000);}catch(javax.crypto.AEADBadTagException wrongKey){}
         throw new IOException("This message needs a different channel key");
     }
     public synchronized void close() { tokens.clear(); vault.close(); }

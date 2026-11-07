@@ -1,4 +1,4 @@
-param([switch]$Package,[string]$Destination='releases/v0.1.2')
+param([switch]$Package,[string]$Destination='releases/v0.1.3')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
@@ -24,7 +24,7 @@ if ($Package) {
         New-Item -ItemType Directory -Force $inputDir | Out-Null
         if($role -eq 'Client') { Copy-Item build/app/* $inputDir -Recurse -Force }
         else { Copy-Item build/app/vch.jar,lib/gson-2.11.0.jar,lib/bcprov-jdk18on-1.83.jar,lib/bcpkix-jdk18on-1.83.jar,lib/bcutil-jdk18on-1.83.jar $inputDir -Force }
-        & (Join-Path $jdk 'bin/jpackage.exe') "-J-Djava.io.tmpdir=$root/build/tmp" --type app-image --name "VCH-$role" --app-version 0.1.2 --vendor VCH --icon assets/vch.ico --input $inputDir --main-jar vch.jar --main-class "chat.vch.${role}App" --dest $packageRoot --java-options '--add-modules=jdk.httpserver' --java-options '-Xmx1024m' --add-modules java.base,java.desktop,java.logging,java.naming,java.net.http,java.management,java.security.jgss,java.instrument,jdk.crypto.ec,jdk.httpserver,jdk.unsupported
+        & (Join-Path $jdk 'bin/jpackage.exe') "-J-Djava.io.tmpdir=$root/build/tmp" --type app-image --name "VCH-$role" --app-version 0.1.3 --vendor VCH --icon assets/vch.ico --input $inputDir --main-jar vch.jar --main-class "chat.vch.${role}App" --dest $packageRoot --java-options '--add-modules=jdk.httpserver' --java-options '-Xmx1024m' --add-modules java.base,java.desktop,java.logging,java.naming,java.net.http,java.management,java.security.jgss,java.instrument,jdk.crypto.ec,jdk.httpserver,jdk.unsupported
         if ($LASTEXITCODE -ne 0) { throw "$role packaging failed" }
         Copy-Item README.md (Join-Path $packageRoot "VCH-$role/README.md") -Force
         Copy-Item docs (Join-Path $packageRoot "VCH-$role/docs") -Recurse -Force

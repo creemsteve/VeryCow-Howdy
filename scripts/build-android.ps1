@@ -9,6 +9,6 @@ if (-not (Test-Path $gradle)) { throw 'Install Gradle 8.9 and update the gradle 
 if (-not (Test-Path build/models/dac.json)) { throw 'Export the codec models first: python voice/export_onnx.py' }
 & $gradle -p android --no-daemon :app:assembleDebug :app:lintDebug
 if ($LASTEXITCODE -ne 0) { throw 'Android build or checks failed' }
-New-Item -ItemType Directory -Force releases/v0.1.2 | Out-Null
-Copy-Item android/app/build/outputs/apk/debug/app-debug.apk releases/v0.1.2/VCH-Android-AOSP-debug.apk -Force
-Write-Host 'Built releases/v0.1.2/VCH-Android-AOSP-debug.apk (Android 10+, no Google services required)'
+New-Item -ItemType Directory -Force releases/v0.1.3 | Out-Null
+Copy-Item android/app/build/outputs/apk/debug/app-debug.apk releases/v0.1.3/VCH-Android-AOSP-debug.apk -Force
+Write-Host 'Built releases/v0.1.3/VCH-Android-AOSP-debug.apk (Android 10+, no Google services required)'

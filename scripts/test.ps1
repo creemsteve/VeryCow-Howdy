@@ -19,4 +19,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Managed channel-key tests failed' }
 if (Test-Path build/models/dac.json) {
     & (Join-Path $jdk 'bin/java.exe') -Xmx1024m -cp 'build/classes;build/test-classes;lib/*' chat.vch.CodecTest
     if ($LASTEXITCODE -ne 0) { throw 'Codec tests failed' }
+    & (Join-Path $jdk 'bin/java.exe') -Xmx1400m --add-modules jdk.httpserver -cp 'build/classes;build/test-classes;lib/*' chat.vch.DesktopVoiceTest
+    if ($LASTEXITCODE -ne 0) { throw 'Native desktop voice tests failed' }
 }

@@ -17,6 +17,7 @@ public final class VoiceSession implements AutoCloseable {
     private String floor="";
     private long floorAt;
     private boolean closed;
+    private final java.util.concurrent.CompletableFuture<Void> stopped=new java.util.concurrent.CompletableFuture<>();
     public VoiceSession(ClientCore core,SavedServer server,Channel channel,Path models){this.core=core;this.server=server;this.channel=channel;this.models=models;}
     public JsonObject request(String path,JsonObject in)throws Exception{
         synchronized(this){if(closed)throw new IOException("Voice session ended");}
@@ -26,7 +27,7 @@ public final class VoiceSession implements AutoCloseable {
             case "/codec":return codec(in);
             case "/encode":{
                 synchronized(this){if(!floor.equals(core.account(server))||System.currentTimeMillis()-floorAt>3000)throw new IOException("Push-to-talk floor unavailable");}
-                in.addProperty("op","encode");in.addProperty("bitRate",channel.bitRate);JsonObject encoded=codec(in);
+                in.addProperty("op","encode");in.addProperty("bitRate",Math.min(channel.bitRate,Math.max(500,core.state.outgoingBitRate)));JsonObject encoded=codec(in);
                 Envelope e=core.envelope(server,channel.id,"voice",Crypto.unb64(Json.str(encoded,"data")));return Json.GSON.toJsonTree(e).getAsJsonObject();
             }
             case "/decode":{
@@ -39,6 +40,7 @@ public final class VoiceSession implements AutoCloseable {
             default:throw new IOException("Unknown voice endpoint");
         }
     }
-    private synchronized JsonObject codec(JsonObject in)throws Exception{if(codec==null)codec=new DacCodec(models);return codec.request(in);}
-    public void close(){synchronized(this){closed=true;if(codec!=null)codec.close();}new Thread(()->{try{core.request(server,"voice",Json.obj("channel",channel.id,"action","leave"),true);}catch(Exception ignored){}},"vch-voice-leave").start();}
+    private synchronized JsonObject codec(JsonObject in)throws Exception{if(closed)throw new IOException("Voice session ended");if(codec==null)codec=new DacCodec(models);return codec.request(in);}
+    public java.util.concurrent.CompletableFuture<Void> whenClosed(){return stopped;}
+    public void close(){synchronized(this){if(closed)return;closed=true;if(codec!=null)codec.close();}Thread leave=new Thread(()->{try{core.request(server,"voice",Json.obj("channel",channel.id,"action","leave"),true);}catch(Exception ignored){}finally{stopped.complete(null);}},"vch-voice-leave");leave.setDaemon(true);leave.start();}
 }
