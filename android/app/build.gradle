@@ -1,0 +1,25 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'chat.vch.mobile'
+    compileSdk 35
+    defaultConfig { applicationId 'chat.vch.mobile'; minSdk 29; targetSdk 35; versionCode 3; versionName '0.1.2' }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17; coreLibraryDesugaringEnabled true }
+    sourceSets.main {
+        java.srcDirs = ['src/main/java', 'build/generated/sharedCore']
+        assets.srcDirs = ['../../build/models', '../../src/main/resources', '../../licenses']
+    }
+    packaging { resources { excludes += ['META-INF/versions/**', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA'] } }
+    androidResources { noCompress += ['onnx'] }
+}
+tasks.register('syncSharedCore', Sync) {
+    from '../../src/main/java'
+    include 'chat/vch/Crypto.java', 'chat/vch/Json.java', 'chat/vch/Vault.java', 'chat/vch/Models.java', 'chat/vch/ClientCore.java', 'chat/vch/MediaRules.java', 'chat/vch/PinnedTls.java', 'chat/vch/ServerAddress.java', 'chat/vch/JoinAuth.java', 'chat/vch/Io.java', 'chat/vch/DacCodec.java', 'chat/vch/VoiceSession.java'
+    into 'build/generated/sharedCore'
+}
+tasks.named('preBuild').configure { dependsOn 'syncSharedCore' }
+dependencies {
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.83'
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.23.2'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+}
