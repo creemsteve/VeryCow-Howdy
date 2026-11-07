@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Force build/classes,build/test-classes,build/app,b
 $sources = @(Get-ChildItem src/main/java -Recurse -Filter '*.java' | ForEach-Object FullName)
 & $javac --release 17 --add-modules jdk.httpserver -encoding UTF-8 -cp 'lib/*' -d build/classes @sources
 if ($LASTEXITCODE -ne 0) { throw 'Java compilation failed' }
-Copy-Item src/main/resources/* build/classes -Force
+Copy-Item src/main/resources/* build/classes -Recurse -Force
 Copy-Item voice/dac_worker.py build/classes -Force
 & (Join-Path $jdk 'bin/jar.exe') "-J-Djava.io.tmpdir=$root/build/tmp" --create --file build/app/vch.jar -C build/classes .
 if ($LASTEXITCODE -ne 0) { throw 'Jar creation failed' }

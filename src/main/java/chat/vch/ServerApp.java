@@ -35,7 +35,7 @@ public final class ServerApp extends JFrame {
         JTextField id = new JTextField(server.state.id); id.setEditable(false);
         JPanel setup = Theme.form("Server name",name,"Listen address",bind,"Server port (default 585)",port,"Certificate (verified automatically)",fingerprint,"Server identity",id);
         root.add(setup,BorderLayout.NORTH);
-        events.setEditable(false); events.setFont(new Font(Font.MONOSPACED,Font.PLAIN,12)); events.setBackground(Theme.INK); events.setForeground(new Color(170,220,255)); root.add(new JScrollPane(events));
+        events.setEditable(false); events.setFont(Theme.font(12)); events.setBackground(Theme.INK); events.setForeground(new Color(170,220,255)); root.add(new JScrollPane(events));
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
         actions.add(Theme.button("Save settings",() -> run(() -> { if (server.running()) throw new Exception("Stop the server before changing its address or port"); synchronized(server) { server.state.name=name.getText().strip(); if (server.state.name.isEmpty() || server.state.name.length()>60) throw new Exception("Name must be 1–60 characters"); server.state.port=Integer.parseInt(port.getText()); if(server.state.port<1||server.state.port>65535)throw new Exception("Port must be 1–65535"); server.save(); } })));
         actions.add(Theme.button("Set join password",() -> { JPasswordField p=new JPasswordField(24); if(JOptionPane.showConfirmDialog(this,Theme.form("Join password (12+ characters)",p),"Server access",JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION)run(() -> server.setPassword(p.getPassword())); p.setText(""); }));

@@ -29,6 +29,8 @@ public final class VoiceBridge implements AutoCloseable {
             if(path.equals("/")&&x.getRequestMethod().equals("GET")){
                 type="text/html; charset=utf-8";try(InputStream in=getClass().getResourceAsStream("/voice.html")){response=Objects.requireNonNull(in).readAllBytes();}
                 x.getResponseHeaders().set("Content-Security-Policy","default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none'");
+            }else if(path.equals("/fonts/IBMPlexMono-Regular.ttf")&&x.getRequestMethod().equals("GET")){
+                type="font/ttf";try(InputStream in=getClass().getResourceAsStream(path)){response=Objects.requireNonNull(in).readAllBytes();}
             }else{
                 if(!x.getRequestMethod().equals("POST")||!token.equals(x.getRequestHeaders().getFirst("X-VCH-Token")))throw new IOException("Unauthorized voice request");
                 String supplied=x.getRequestHeaders().getFirst("Origin");if(supplied!=null&&!origin.equals(supplied))throw new IOException("Invalid origin");
