@@ -6,6 +6,7 @@ struct Ui {
     app: App,
     output: egui::FullOutput,
     time: f64,
+    size: Vec2,
 }
 impl Ui {
     fn new(app: App) -> Self {
@@ -14,6 +15,7 @@ impl Ui {
             app,
             output: Default::default(),
             time: 0.0,
+            size: Vec2::new(1400.0, 2400.0),
         };
         ui.frame(vec![]);
         ui
@@ -24,9 +26,16 @@ impl Ui {
         self.app.last_poll = Instant::now();
         self.output = self.ctx.run(
             RawInput {
-                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1400.0, 2400.0))),
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, self.size)),
                 focused: true,
                 time: Some(self.time),
+                modifiers: events
+                    .iter()
+                    .find_map(|e| match e {
+                        InputEvent::Key { modifiers, .. } => Some(*modifiers),
+                        _ => None,
+                    })
+                    .unwrap_or_default(),
                 events,
                 ..Default::default()
             },
@@ -48,6 +57,16 @@ impl Ui {
             .iter()
             .find_map(|s| locate(&s.shape, label))
             .unwrap_or_else(|| panic!("Missing visible control: {label}"))
+    }
+    fn contains(&self, text: &str) -> bool {
+        fn contains(shape: &Shape, text: &str) -> bool {
+            match shape {
+                Shape::Text(t) => t.galley.text().contains(text),
+                Shape::Vec(shapes) => shapes.iter().any(|s| contains(s, text)),
+                _ => false,
+            }
+        }
+        self.output.shapes.iter().any(|s| contains(&s.shape, text))
     }
     fn click(&mut self, label: &str) {
         self.frame(vec![]);
@@ -225,6 +244,19 @@ fn client_desktop_actions_persist_and_reconnect() {
         "build/models".into(),
     ));
     ui.app.channel = channel.clone();
+    ui.frame(vec![]);
+    ui.click("Send");
+    assert!(!ui.app.sending && !ui.app.busy);
+    assert!(server
+        .app
+        .server
+        .as_ref()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .state
+        .messages
+        .is_empty());
     ui.app.message = "Sent through the native desktop action".into();
     let mut png = std::io::Cursor::new(Vec::new());
     image::DynamicImage::new_rgb8(32, 32)
@@ -238,6 +270,42 @@ fn client_desktop_actions_persist_and_reconnect() {
     assert!(ui.app.message.is_empty() && ui.app.staged.is_empty());
     let server_core = server.app.server.as_ref().unwrap();
     assert_eq!(server_core.lock().unwrap().state.messages.len(), 2);
+    // Exercise the real focused composer, including preservation of newlines.
+    ui.app.message = "Keyboard send".into();
+    ui.click("Keyboard send");
+    ui.frame(vec![InputEvent::Key {
+        key: egui::Key::End,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Default::default(),
+    }]);
+    ui.frame(vec![InputEvent::Key {
+        key: egui::Key::Enter,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Default::default(),
+    }]);
+    ui.done();
+    assert_eq!(ui.app.message, "Keyboard send\n");
+    ui.frame(vec![InputEvent::Key {
+        key: egui::Key::Enter,
+        physical_key: None,
+        pressed: false,
+        repeat: false,
+        modifiers: Default::default(),
+    }]);
+    ui.frame(vec![InputEvent::Key {
+        key: egui::Key::Enter,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: egui::Modifiers::CTRL | egui::Modifiers::COMMAND,
+    }]);
+    ui.done();
+    assert!(ui.app.message.is_empty());
+    assert_eq!(server_core.lock().unwrap().state.messages.len(), 3);
     ui.click("Profile");
     ui.app.profile.name = "Desktop profile".into();
     ui.app.profile.pronouns = "they/them".into();
@@ -353,4 +421,181 @@ fn server_desktop_editors_save_rotate_and_stop() {
     assert_eq!(server.state.name, "Verified desktop community");
     assert_eq!(server.state.channels.len(), 4);
     assert_eq!(server.state.roles[0].name, "Verified role");
+}
+
+#[test]
+fn first_time_setup_paths_and_password_labels() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut client = Ui::new(App::new(
+        Mode::Client,
+        dir.path().join("client"),
+        "build/models".into(),
+    ));
+    assert!(client.contains("Local vault password"));
+    client.click("I’m hosting");
+    assert!(client.contains("Open server setup"));
+    assert!(!client.contains("Local vault password"));
+    assert!(!client.app.unlocked);
+    client.click("Continue to local vault and join");
+    assert!(client.contains("Local vault password"));
+    client.app.password = "private local vault password".into();
+    client.app.confirm = client.app.password.clone();
+    client.click("Create vault");
+    client.done();
+    assert!(client.contains("1. Local vault unlocked."));
+    assert!(client.contains("Join password"));
+    client.click("Join");
+    assert!(!client.app.busy);
+    assert!(client
+        .app
+        .error
+        .contains("server address and join password"));
+    assert!(!client.contains("Joined successfully."));
+
+    let mut server = Ui::new(App::new(
+        Mode::Server,
+        dir.path().join("server"),
+        "build/models".into(),
+    ));
+    assert!(server.contains("Server vault password"));
+    assert!(!server.contains("Local vault password"));
+    server.app.password = "private server vault password".into();
+    server.app.confirm = server.app.password.clone();
+    server.click("Create vault");
+    server.done();
+    assert!(server.contains("1. Server vault unlocked."));
+    server.click("Start server");
+    assert!(server.app.running.is_none());
+    assert!(!server.contains("Server is listening."));
+    server.app.join_setting = "short".into();
+    server.click("Set join password");
+    while server.app.busy {
+        std::thread::sleep(Duration::from_millis(10));
+        server.frame(vec![]);
+    }
+    assert!(server
+        .app
+        .error
+        .contains("Join password requires at least 12 characters"));
+    assert!(server.app.server_view.password_verifier.is_none());
+    server.app.join_setting = "shared member join password".into();
+    server.click("Set join password");
+    server.done();
+    assert!(server.contains("3. Join password set."));
+    assert!(server.app.join_setting.is_empty());
+    server.app.edit_name = "My new community".into();
+    server.frame(vec![]);
+    assert!(server.contains("Save your changes in Overview"));
+    server.click("Start server");
+    assert!(server.app.running.is_none());
+    server.click("Save overview");
+    server.done();
+    assert!(server.contains("2. Configuration saved: My new community"));
+}
+
+#[test]
+fn joining_setup_completes_only_after_authenticated_connection() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut server = server_app(&dir.path().join("server"));
+    server.click("Start server");
+    assert!(server.contains("4. Server is listening."));
+    let address = server.app.running.as_ref().unwrap().address;
+    let core = ClientCore::open(vault(&dir.path().join("client"))).unwrap();
+    let mut client = Ui::new(App::from_client(
+        core,
+        dir.path().join("client"),
+        "build/models".into(),
+    ));
+    client.app.address = address.to_string();
+    client.app.join_password = "incorrect join password".into();
+    client.click("Join");
+    while client.app.busy {
+        std::thread::sleep(Duration::from_millis(10));
+        client.frame(vec![]);
+    }
+    assert!(!client.app.error.is_empty());
+    assert!(client.app.view.servers.is_empty());
+    assert!(!client.contains("Joined successfully."));
+    // A failed proof starts the real server’s ten-second retry cooldown.
+    std::thread::sleep(Duration::from_millis(10100));
+    client.app.join_password = "desktop join password".into();
+    client.click("Join");
+    client.done();
+    assert!(client.contains("Joined successfully."));
+    assert_eq!(client.app.view.servers.len(), 1);
+    assert!(client.app.join_password.is_empty());
+    client.click("Disconnect");
+    client.done();
+    assert!(!client.contains("Joined successfully."));
+    server.click("Stop server");
+    assert!(!server.contains("4. Server is listening."));
+    assert!(server.app.running.is_none());
+}
+
+#[test]
+fn drafts_follow_destinations_and_lock_clears_them() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = App::new(Mode::Client, dir.path().into(), "build/models".into());
+    app.activate_draft("community-a", "general");
+    app.message = "Unsent in A".into();
+    app.staged.push(vec![1, 2, 3]);
+    app.activate_draft("community-a", "help");
+    assert!(app.message.is_empty() && app.staged.is_empty());
+    app.message = "Unsent help".into();
+    app.activate_draft("community-b", "general");
+    assert!(app.message.is_empty());
+    app.activate_draft("community-a", "general");
+    assert_eq!(app.message, "Unsent in A");
+    assert_eq!(app.staged, vec![vec![1, 2, 3]]);
+    // Finishing a send after navigation clears only the original destination.
+    app.sending = true;
+    app.sending_target = app.draft_key.clone();
+    app.activate_draft("community-a", "help");
+    app.tx.send(Event::Done(Ok("Sent".into()))).unwrap();
+    app.events();
+    assert_eq!(app.message, "Unsent help");
+    app.activate_draft("community-a", "general");
+    assert!(app.message.is_empty() && app.staged.is_empty());
+    app.lock();
+    assert!(app.drafts.is_empty() && app.draft_key.is_none());
+}
+
+#[test]
+fn offline_composer_and_feedback_at_minimum_window_size() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut core = ClientCore::open(vault(dir.path())).unwrap();
+    core.state.servers.push(SavedServer {
+        id: "offline".into(),
+        name: "Saved community".into(),
+        channels: vec![Channel {
+            id: "general".into(),
+            name: "general".into(),
+            kind: "text".into(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    });
+    let mut ui = Ui::new(App::from_client(
+        core,
+        dir.path().into(),
+        "build/models".into(),
+    ));
+    ui.app.channel = "general".into();
+    ui.app.message = "Offline draft".into();
+    ui.size = Vec2::new(760., 600.);
+    ui.frame(vec![]);
+    assert!(ui.contains("You’re offline"));
+    assert!(ui.point("Send").y < 600.);
+    ui.click("Send");
+    assert!(!ui.app.sending && !ui.app.busy);
+    assert_eq!(ui.app.message, "Offline draft");
+    ui.app.status = "Profile saved".into();
+    ui.app.tx.send(Event::Done(Ok(String::new()))).unwrap();
+    ui.frame(vec![]);
+    assert!(ui.contains("Profile saved"));
+    ui.click("Dismiss");
+    assert!(ui.app.status.is_empty());
+    ui.app.channel_filter = "missing".into();
+    ui.frame(vec![]);
+    assert!(ui.contains("No matching channels"));
 }

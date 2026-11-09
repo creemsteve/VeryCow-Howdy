@@ -22,12 +22,74 @@ pub fn material(encoded: &str) -> Result<(Vec<CertificateDer<'static>>, PrivateK
     let (_, chain) = store
         .private_key_chain()
         .ok_or_else(|| anyhow!("TLS private key missing"))?;
-    let certs = chain
+    let certs: Vec<_> = chain
         .chain()
         .iter()
         .map(|c| CertificateDer::from(c.as_der().to_vec()))
         .collect();
-    Ok((certs, PrivatePkcs8KeyDer::from(chain.key().to_vec()).into()))
+    let key = compatible_key(chain.key(), &certs)?;
+    Ok((certs, PrivatePkcs8KeyDer::from(key).into()))
+}
+
+fn compatible_key(key: &[u8], certs: &[CertificateDer<'_>]) -> Result<Vec<u8>> {
+    use ml_dsa::pkcs8::{
+        der::{
+            asn1::{AnyRef, BitStringRef, ContextSpecific, ObjectIdentifier, OctetStringRef},
+            Decode, Encode, Reader, Tag, TagMode, TagNumber,
+        },
+        PrivateKeyInfoRef, SubjectPublicKeyInfoRef,
+    };
+
+    let info = PrivateKeyInfoRef::from_der(key)?;
+    if info.algorithm.oid.to_string() != "1.2.840.10045.2.1" {
+        return Ok(key.to_vec());
+    }
+    let ec = AnyRef::from_der(info.private_key.as_bytes())?;
+    let (parameters, public) = ec.sequence(|reader| -> Result<_> {
+        let version: u8 = reader.decode()?;
+        anyhow::ensure!(version == 1, "Invalid EC private key version");
+        let _: &OctetStringRef = reader.decode()?;
+        let parameters =
+            reader.context_specific::<ObjectIdentifier>(TagNumber(0), TagMode::Explicit)?;
+        let public = reader.context_specific::<BitStringRef>(TagNumber(1), TagMode::Explicit)?;
+        Ok((parameters, public))
+    })?;
+    if public.is_some() {
+        return Ok(key.to_vec());
+    }
+
+    // Java EC keys can omit the optional SEC1 public key, which ring requires.
+    // Restore it from the unchanged certificate; ring validates the key pair.
+    let leaf = certs
+        .first()
+        .ok_or_else(|| anyhow!("TLS certificate missing"))?;
+    let (_, cert) = x509_parser::parse_x509_certificate(leaf.as_ref())
+        .map_err(|_| anyhow!("Invalid TLS certificate"))?;
+    let spki = SubjectPublicKeyInfoRef::from_der(cert.public_key().raw)?;
+    anyhow::ensure!(
+        info.algorithm == spki.algorithm,
+        "TLS key algorithm mismatch"
+    );
+    if let Some(parameters) = parameters {
+        anyhow::ensure!(
+            Some(parameters)
+                == info
+                    .algorithm
+                    .parameters
+                    .map(|p| p.decode_as())
+                    .transpose()?,
+            "TLS key curve mismatch"
+        );
+    }
+    let mut body = zeroize::Zeroizing::new(ec.value().to_vec());
+    ContextSpecific {
+        tag_number: TagNumber(1),
+        tag_mode: TagMode::Explicit,
+        value: spki.subject_public_key,
+    }
+    .encode_to_vec(&mut body)?;
+    let ec_der = zeroize::Zeroizing::new(AnyRef::new(Tag::Sequence, &body)?.to_der()?);
+    Ok(PrivateKeyInfoRef::new(info.algorithm, OctetStringRef::new(&ec_der)?).to_der()?)
 }
 pub fn fingerprint(encoded: &str) -> Result<String> {
     let (certs, _) = material(encoded)?;

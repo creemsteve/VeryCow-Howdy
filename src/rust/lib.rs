@@ -12,6 +12,8 @@ pub mod images;
 pub mod limiter;
 pub mod mobile;
 pub mod models;
+#[cfg(feature = "desktop")]
+pub mod native_video;
 pub mod server;
 pub mod tls;
 pub mod vault;

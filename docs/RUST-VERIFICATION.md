@@ -2,7 +2,15 @@
 
 Verified on Windows x64 on 2026-11-09. The current desktop client/server source and build paths are Rust; the legacy Java desktop application, tests, Maven descriptor, dependency bootstrap and comparison/build tools have been removed. The new VCH Flip Android client has a separate [verification record](ANDROID.md); desktop verification does not establish handset compatibility.
 
-## Completed checks
+## Native media and UX update
+
+The browser voice/video assets, loopback bridge, browser launcher and browser automation suites have been removed. Native Rust capture and software AVC now serve desktop video. The current suite passed 46 tests (one physical audio test intentionally ignored), including native AVC encode/decode, malformed packets, concurrent synthetic screen/webcam relay streams, receive opt-in, bitrate changes and capture cleanup. The headless build passed 28 tests. Formatting and strict Clippy passed, as did a desktop-only build without audio/neural features.
+
+New production-control checks cover per-channel drafts and attachments, send completion after navigation, empty/offline send gating, Ctrl+Enter, persistent/dismissible feedback and the composer at 760×600. Native Windows inspection confirmed the compact chat/sidebar layout and native video panel, including its missing-microphone failure state. The default window is now 1200×720. All three updated release executables built successfully and passed command-line startup/help checks. See [UX research and implementation](UX-IMPROVEMENTS.md).
+
+Physical camera capture, hardware audio quality, macOS/Linux execution and hardware video acceleration are not verified by these tests. Native video uses software AVC and does not decode VP8. Historical browser verification below describes the previous implementation and is retained as history. The coverage percentages below also predate this update.
+
+## Earlier completed checks
 
 - Formatting and strict Clippy passed.
 - The final headless configuration passed all 23 applicable tests without desktop/audio/neural features.
@@ -49,4 +57,4 @@ Fresh LLVM coverage across all targets: 74.79% functions and 83.75% lines. The r
 | video.rs | 94.12 | 97.18 |
 | voice.rs | 56.52 | 89.33 |
 
-Interactive report: `target/coverage/html/index.html`. JSON: `target/coverage.json`. Reproduce with `scripts/test.ps1 -Coverage -Browser`. The headless configuration uses `cargo test --locked --no-default-features --all-targets`; the real device check uses `cargo test --locked --test desktop_devices -- --ignored --nocapture`. See [build instructions](RUST-BUILD.md) and [migration details](RUST-MIGRATION.md).
+Interactive report: `target/coverage/html/index.html`. JSON: `target/coverage.json`. Reproduce with `scripts/test.ps1 -Coverage`. The headless configuration uses `cargo test --locked --no-default-features --all-targets`; the real device check uses `cargo test --locked --test desktop_devices -- --ignored --nocapture`. See [build instructions](RUST-BUILD.md) and [migration details](RUST-MIGRATION.md).

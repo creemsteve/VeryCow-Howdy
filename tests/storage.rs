@@ -125,6 +125,36 @@ fn java_fixtures() {
         vch_core::tls::fingerprint(f["tlsStore"].as_str().unwrap()).unwrap(),
         f["fingerprint"]
     );
+    vch_core::tls::server(f["tlsStore"].as_str().unwrap()).unwrap();
+}
+
+#[test]
+fn generated_tls_store_loads_for_server() {
+    let store = vch_core::tls::create().unwrap();
+    vch_core::tls::server(&store).unwrap();
+}
+
+#[test]
+fn legacy_tls_key_rejects_mismatched_certificate() {
+    let f: Value = serde_json::from_str(include_str!("fixtures/java.json")).unwrap();
+    let legacy = p12_keystore::KeyStore::from_pkcs12(
+        &crypto::unb64(f["tlsStore"].as_str().unwrap()).unwrap(),
+        "",
+    )
+    .unwrap();
+    let (_, legacy_chain) = legacy.private_key_chain().unwrap();
+    let other = vch_core::tls::create().unwrap();
+    let other = p12_keystore::KeyStore::from_pkcs12(&crypto::unb64(&other).unwrap(), "").unwrap();
+    let (_, other_chain) = other.private_key_chain().unwrap();
+    let chain = p12_keystore::PrivateKeyChain::new(
+        legacy_chain.key(),
+        b"vch",
+        other_chain.chain().to_vec(),
+    );
+    let mut store = p12_keystore::KeyStore::new();
+    store.add_entry("vch", p12_keystore::KeyStoreEntry::PrivateKeyChain(chain));
+    let encoded = crypto::b64(&store.writer("").write().unwrap());
+    assert!(vch_core::tls::server(&encoded).is_err());
 }
 
 #[test]

@@ -24,6 +24,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | android-activity | 0.6.1 | MIT OR Apache-2.0 |
 | android-properties | 0.2.2 | MIT |
 | android_system_properties | 0.1.6 | MIT OR Apache-2.0 |
+| annotate-snippets | 0.11.5 | MIT OR Apache-2.0 |
 | anstream | 1.0.0 | MIT OR Apache-2.0 |
 | anstyle | 1.0.14 | MIT OR Apache-2.0 |
 | anstyle-parse | 1.0.0 | MIT OR Apache-2.0 |
@@ -36,6 +37,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | arrayvec | 0.7.8 | MIT OR Apache-2.0 |
 | as-raw-xcb-connection | 1.0.1 | MIT OR Apache-2.0 |
 | ash | 0.38.0+1.3.281 | MIT OR Apache-2.0 |
+| ashpd | 0.14.0 | MIT |
 | ashpd | 0.8.2 | MIT |
 | asn1-rs | 0.7.2 | MIT OR Apache-2.0 |
 | asn1-rs-derive | 0.6.0 | MIT OR Apache-2.0 |
@@ -60,6 +62,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | autocfg | 1.5.1 | Apache-2.0 OR MIT |
 | base64 | 0.22.1 | MIT OR Apache-2.0 |
 | base64ct | 1.8.3 | Apache-2.0 OR MIT |
+| bindgen | 0.65.1 | BSD-3-Clause |
 | bindgen | 0.72.1 | BSD-3-Clause |
 | bit-set | 0.6.0 | MIT/Apache-2.0 |
 | bit-vec | 0.7.0 | MIT/Apache-2.0 |
@@ -85,6 +88,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | cc | 1.11.1 | MIT OR Apache-2.0 |
 | cesu8 | 1.1.0 | Apache-2.0/MIT |
 | cexpr | 0.6.0 | Apache-2.0/MIT |
+| cfg-expr | 0.20.10 | MIT OR Apache-2.0 |
+| cfg-if | 0.1.10 | MIT/Apache-2.0 |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 |
 | cfg_aliases | 0.1.1 | MIT |
 | cfg_aliases | 0.2.2 | MIT |
@@ -99,6 +104,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | clipboard-win | 5.4.3 | BSL-1.0 |
 | cmov | 0.5.4 | Apache-2.0 OR MIT |
 | cms | 0.2.3 | Apache-2.0 OR MIT |
+| cocoa | 0.20.2 | MIT / Apache-2.0 |
+| cocoa-foundation | 0.2.1 | MIT OR Apache-2.0 |
 | codespan-reporting | 0.11.1 | Apache-2.0 |
 | colorchoice | 1.0.5 | MIT OR Apache-2.0 |
 | com | 0.6.0 | MIT |
@@ -108,10 +115,18 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | concurrent-queue | 2.5.0 | Apache-2.0 OR MIT |
 | const-oid | 0.10.2 | Apache-2.0 OR MIT |
 | const-oid | 0.9.6 | Apache-2.0 OR MIT |
+| cookie-factory | 0.3.3 | MIT |
+| core-foundation | 0.10.1 | MIT OR Apache-2.0 |
+| core-foundation | 0.7.0 | MIT / Apache-2.0 |
 | core-foundation | 0.9.4 | MIT OR Apache-2.0 |
+| core-foundation-sys | 0.7.0 | MIT / Apache-2.0 |
 | core-foundation-sys | 0.8.7 | MIT OR Apache-2.0 |
+| core-graphics | 0.19.2 | MIT / Apache-2.0 |
 | core-graphics | 0.23.2 | MIT OR Apache-2.0 |
 | core-graphics-types | 0.1.3 | MIT OR Apache-2.0 |
+| core-graphics-types | 0.2.0 | MIT OR Apache-2.0 |
+| core-media-sys | 0.1.2 | MIT |
+| core-video-sys | 0.1.4 | MIT |
 | coreaudio-rs | 0.11.3 | MIT/Apache-2.0 |
 | coreaudio-sys | 0.2.18 | MIT |
 | cpal | 0.15.3 | Apache-2.0 |
@@ -142,6 +157,11 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | document-features | 0.2.12 | MIT OR Apache-2.0 |
 | downcast-rs | 1.2.1 | MIT/Apache-2.0 |
 | dpi | 0.1.2 | Apache-2.0 AND MIT |
+| drm | 0.14.1 | MIT |
+| drm | 0.15.0 | MIT |
+| drm-ffi | 0.9.1 | MIT |
+| drm-fourcc | 2.2.0 | MIT |
+| drm-sys | 0.8.1 | MIT |
 | ecolor | 0.29.1 | MIT OR Apache-2.0 |
 | eframe | 0.29.1 | MIT OR Apache-2.0 |
 | egui | 0.29.1 | MIT OR Apache-2.0 |
@@ -165,9 +185,12 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | find-msvc-tools | 0.1.15 | MIT OR Apache-2.0 |
 | flagset | 0.4.7 | Apache-2.0 |
 | flate2 | 1.1.11 | MIT OR Apache-2.0 |
+| flume | 0.11.1 | Apache-2.0/MIT |
 | foldhash | 0.1.5 | Zlib |
+| foreign-types | 0.3.2 | MIT/Apache-2.0 |
 | foreign-types | 0.5.0 | MIT/Apache-2.0 |
 | foreign-types-macros | 0.2.4 | MIT/Apache-2.0 |
+| foreign-types-shared | 0.1.1 | MIT/Apache-2.0 |
 | foreign-types-shared | 0.3.1 | MIT/Apache-2.0 |
 | form_urlencoded | 1.2.2 | MIT OR Apache-2.0 |
 | fs2 | 0.4.3 | MIT/Apache-2.0 |
@@ -179,12 +202,15 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | futures-sink | 0.3.34 | MIT OR Apache-2.0 |
 | futures-task | 0.3.34 | MIT OR Apache-2.0 |
 | futures-util | 0.3.34 | MIT OR Apache-2.0 |
+| gbm | 0.18.0 | MIT |
+| gbm-sys | 0.4.0 | MIT |
 | generic-array | 0.14.7 | MIT |
 | gethostname | 1.1.0 | Apache-2.0 |
 | getrandom | 0.2.17 | MIT OR Apache-2.0 |
 | getrandom | 0.3.4 | MIT OR Apache-2.0 |
 | getrandom | 0.4.3 | MIT OR Apache-2.0 |
 | ghash | 0.5.1 | Apache-2.0 OR MIT |
+| gl | 0.14.0 | Apache-2.0 |
 | gl_generator | 0.14.0 | Apache-2.0 |
 | glob | 0.3.4 | MIT OR Apache-2.0 |
 | glow | 0.13.1 | MIT OR Apache-2.0 OR Zlib |
@@ -207,6 +233,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | hex | 0.4.3 | MIT OR Apache-2.0 |
 | hexf-parse | 0.2.1 | CC0-1.0 |
 | hmac | 0.12.1 | MIT OR Apache-2.0 |
+| home | 0.5.12 | MIT OR Apache-2.0 |
 | hybrid-array | 0.4.15 | MIT OR Apache-2.0 |
 | icu_collections | 2.4.0 | Unicode-3.0 |
 | icu_locale_core | 2.4.0 | Unicode-3.0 |
@@ -237,11 +264,16 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | khronos-egl | 6.0.0 | MIT/Apache-2.0 |
 | khronos_api | 3.1.0 | Apache-2.0 |
 | lazy_static | 1.5.1 | MIT OR Apache-2.0 |
+| lazycell | 1.3.0 | MIT/Apache-2.0 |
 | libc | 0.2.191 | MIT OR Apache-2.0 |
 | libloading | 0.8.9 | ISC |
 | libredox | 0.1.25 | MIT |
+| libspa | 0.10.1 | MIT |
+| libspa-sys | 0.10.1 | MIT |
+| libwayshot-xcap | 0.3.3 | BSD-2-Clause |
 | linux-raw-sys | 0.12.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | linux-raw-sys | 0.4.15 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
+| linux-raw-sys | 0.9.4 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | litemap | 0.8.3 | Unicode-3.0 |
 | litrs | 1.0.1 | MIT OR Apache-2.0 |
 | lock_api | 0.4.14 | MIT OR Apache-2.0 |
@@ -252,6 +284,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | memchr | 2.8.3 | Unlicense OR MIT |
 | memmap2 | 0.9.12 | MIT OR Apache-2.0 |
 | memoffset | 0.9.1 | MIT |
+| metal | 0.18.0 | MIT OR Apache-2.0 |
 | metal | 0.29.0 | MIT OR Apache-2.0 |
 | minimal-lexical | 0.2.1 | MIT/Apache-2.0 |
 | miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 |
@@ -260,6 +293,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | module-lattice | 0.2.4 | Apache-2.0 OR MIT |
 | moxcms | 0.8.1 | BSD-3-Clause OR Apache-2.0 |
 | naga | 22.1.0 | MIT OR Apache-2.0 |
+| nanorand | 0.7.0 | Zlib |
+| nasm-rs | 0.3.2 | MIT OR Apache-2.0 |
 | ndarray | 0.16.1 | MIT OR Apache-2.0 |
 | ndk | 0.8.0 | MIT OR Apache-2.0 |
 | ndk | 0.9.0 | MIT OR Apache-2.0 |
@@ -269,7 +304,13 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | nix | 0.29.0 | MIT |
 | nix | 0.31.3 | MIT |
 | nohash-hasher | 0.2.0 | Apache-2.0 OR MIT |
+| nokhwa | 0.10.11 | Apache-2.0 |
+| nokhwa-bindings-linux | 0.1.4 | Apache-2.0 |
+| nokhwa-bindings-macos | 0.2.4 | Apache-2.0 |
+| nokhwa-bindings-windows | 0.4.6 | Apache-2.0 |
+| nokhwa-core | 0.1.9 | Apache-2.0 |
 | nom | 7.1.3 | MIT |
+| nom | 8.0.0 | MIT |
 | num-bigint | 0.4.8 | MIT OR Apache-2.0 |
 | num-complex | 0.4.6 | MIT OR Apache-2.0 |
 | num-conv | 0.2.2 | MIT OR Apache-2.0 |
@@ -285,13 +326,18 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | objc2 | 0.6.5 | MIT |
 | objc2-app-kit | 0.2.2 | MIT |
 | objc2-app-kit | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
+| objc2-av-foundation | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | objc2-cloud-kit | 0.2.2 | MIT |
 | objc2-contacts | 0.2.2 | MIT |
+| objc2-core-audio | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
+| objc2-core-audio-types | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | objc2-core-data | 0.2.2 | MIT |
 | objc2-core-foundation | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | objc2-core-graphics | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | objc2-core-image | 0.2.2 | MIT |
 | objc2-core-location | 0.2.2 | MIT |
+| objc2-core-media | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
+| objc2-core-video | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | objc2-encode | 4.1.0 | MIT |
 | objc2-foundation | 0.2.2 | MIT |
 | objc2-foundation | 0.3.2 | MIT |
@@ -303,6 +349,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | objc2-ui-kit | 0.2.2 | MIT |
 | objc2-uniform-type-identifiers | 0.2.2 | MIT |
 | objc2-user-notifications | 0.2.2 | MIT |
+| objc_exception | 0.1.2 | MIT |
 | objc_id | 0.1.1 | MIT |
 | oboe | 0.6.1 | Apache-2.0 |
 | oboe-sys | 0.6.1 | Apache-2.0 |
@@ -310,6 +357,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | once_cell | 1.21.4 | MIT OR Apache-2.0 |
 | once_cell_polyfill | 1.70.2 | MIT OR Apache-2.0 |
 | opaque-debug | 0.3.1 | MIT OR Apache-2.0 |
+| openh264 | 0.9.9 | BSD-2-Clause |
+| openh264-sys2 | 0.9.9 | BSD-2-Clause |
 | orbclient | 0.3.55 | MIT |
 | ordered-stream | 0.2.0 | MIT OR Apache-2.0 |
 | ort | 2.0.0-rc.10 | MIT OR Apache-2.0 |
@@ -322,6 +371,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | password-hash | 0.5.0 | MIT OR Apache-2.0 |
 | paste | 1.0.15 | MIT OR Apache-2.0 |
 | pbkdf2 | 0.12.2 | MIT OR Apache-2.0 |
+| peeking_take_while | 0.1.2 | Apache-2.0/MIT |
 | pem | 3.0.6 | MIT |
 | pem-rfc7468 | 0.7.0 | Apache-2.0 OR MIT |
 | percent-encoding | 2.3.2 | MIT OR Apache-2.0 |
@@ -329,6 +379,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | pin-project-internal | 1.1.13 | Apache-2.0 OR MIT |
 | pin-project-lite | 0.2.17 | Apache-2.0 OR MIT |
 | piper | 0.2.5 | MIT OR Apache-2.0 |
+| pipewire | 0.10.1 | MIT |
+| pipewire-sys | 0.10.1 | MIT |
 | pkcs12 | 0.1.0 | Apache-2.0 OR MIT |
 | pkcs5 | 0.7.1 | Apache-2.0 OR MIT |
 | pkcs8 | 0.11.0 | Apache-2.0 OR MIT |
@@ -337,6 +389,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | png | 0.18.1 | MIT OR Apache-2.0 |
 | polling | 3.11.0 | Apache-2.0 OR MIT |
 | pollster | 0.3.0 | Apache-2.0/MIT |
+| pollster | 1.0.1 | Apache-2.0/MIT |
 | polyval | 0.6.2 | Apache-2.0 OR MIT |
 | portable-atomic | 1.15.0 | Apache-2.0 OR MIT |
 | portable-atomic-util | 0.2.8 | Apache-2.0 OR MIT |
@@ -344,6 +397,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | powerfmt | 0.2.1 | MIT OR Apache-2.0 |
 | ppv-lite86 | 0.2.21 | MIT OR Apache-2.0 |
 | presser | 0.3.1 | MIT OR Apache-2.0 |
+| prettyplease | 0.2.37 | MIT OR Apache-2.0 |
 | proc-macro-crate | 3.5.0 | MIT OR Apache-2.0 |
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
 | profiling | 1.0.18 | MIT OR Apache-2.0 |
@@ -384,6 +438,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | rustls-pki-types | 1.15.1 | MIT OR Apache-2.0 |
 | rustls-webpki | 0.103.16 | ISC |
 | rustversion | 1.0.23 | MIT OR Apache-2.0 |
+| safe_arch | 1.2.0 | Zlib OR Apache-2.0 OR MIT |
 | salsa20 | 0.10.2 | MIT OR Apache-2.0 |
 | same-file | 1.0.6 | Unlicense/MIT |
 | scoped-tls | 1.0.1 | MIT/Apache-2.0 |
@@ -396,6 +451,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | serde_derive | 1.0.229 | MIT OR Apache-2.0 |
 | serde_json | 1.0.154 | MIT OR Apache-2.0 |
 | serde_repr | 0.1.21 | MIT OR Apache-2.0 |
+| serde_spanned | 1.1.3 | MIT OR Apache-2.0 |
 | sha1 | 0.10.7 | MIT OR Apache-2.0 |
 | sha2 | 0.10.9 | MIT OR Apache-2.0 |
 | shake | 0.1.0 | MIT OR Apache-2.0 |
@@ -414,6 +470,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | smithay-client-toolkit | 0.20.0 | MIT |
 | smithay-clipboard | 0.7.3 | MIT |
 | smol_str | 0.2.2 | MIT OR Apache-2.0 |
+| socket2 | 0.6.5 | MIT OR Apache-2.0 |
+| spin | 0.9.9 | MIT |
 | spirv | 0.3.0+sdk-1.3.268.0 | Apache-2.0 |
 | spki | 0.7.3 | Apache-2.0 OR MIT |
 | spki | 0.8.1 | Apache-2.0 OR MIT |
@@ -428,6 +486,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | syn | 3.0.9 | MIT OR Apache-2.0 |
 | synstructure | 0.13.2 | MIT |
 | synstructure | 0.14.0 | MIT |
+| system-deps | 7.0.8 | MIT OR Apache-2.0 |
+| target-lexicon | 0.13.5 | Apache-2.0 WITH LLVM-exception |
 | tempfile | 3.27.0 | MIT OR Apache-2.0 |
 | termcolor | 1.4.1 | Unlicense OR MIT |
 | thiserror | 1.0.69 | MIT OR Apache-2.0 |
@@ -441,9 +501,11 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | tiny-skia-path | 0.11.4 | BSD-3-Clause |
 | tinystr | 0.8.5 | Unicode-3.0 |
 | tokio | 1.54.1 | MIT |
+| toml | 1.2.1+spec-1.1.0 | MIT OR Apache-2.0 |
 | toml_datetime | 1.1.3+spec-1.1.0 | MIT OR Apache-2.0 |
 | toml_edit | 0.25.19+spec-1.1.0 | MIT OR Apache-2.0 |
 | toml_parser | 1.1.5+spec-1.1.0 | MIT OR Apache-2.0 |
+| toml_writer | 1.2.0+spec-1.1.0 | MIT OR Apache-2.0 |
 | tracing | 0.1.44 | MIT |
 | tracing-attributes | 0.1.31 | MIT |
 | tracing-core | 0.1.36 | MIT |
@@ -454,6 +516,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | unicode-ident | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 |
 | unicode-segmentation | 1.13.3 | MIT OR Apache-2.0 |
 | unicode-width | 0.1.14 | MIT OR Apache-2.0 |
+| unicode-width | 0.2.3 | MIT OR Apache-2.0 |
 | unicode-xid | 0.2.6 | MIT OR Apache-2.0 |
 | universal-hash | 0.5.1 | MIT OR Apache-2.0 |
 | untrusted | 0.9.0 | ISC |
@@ -463,6 +526,9 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | utf8parse | 0.2.2 | Apache-2.0 OR MIT |
 | utf_types | 1.0.0 | Apache-2.0 OR MIT |
 | uuid | 1.29.2 | Apache-2.0 OR MIT |
+| v4l | 0.14.0 | MIT |
+| v4l2-sys-mit | 0.3.0 | MIT |
+| version-compare | 0.2.1 | MIT |
 | version_check | 0.9.5 | MIT/Apache-2.0 |
 | walkdir | 2.5.0 | Unlicense/MIT |
 | wasi | 0.11.1+wasi-snapshot-preview1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
@@ -482,6 +548,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | wayland-protocols-plasma | 0.3.12 | MIT |
 | wayland-protocols-wlr | 0.3.12 | MIT |
 | wayland-scanner | 0.31.11 | MIT |
+| wayland-server | 0.31.14 | MIT |
 | wayland-sys | 0.31.11 | MIT |
 | web-sys | 0.3.107 | MIT OR Apache-2.0 |
 | web-time | 1.1.0 | MIT OR Apache-2.0 |
@@ -490,6 +557,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | wgpu-core | 22.1.0 | MIT OR Apache-2.0 |
 | wgpu-hal | 22.0.0 | MIT OR Apache-2.0 |
 | wgpu-types | 22.0.0 | MIT OR Apache-2.0 |
+| which | 4.4.2 | MIT |
+| wide | 1.7.1 | Zlib OR Apache-2.0 OR MIT |
 | widestring | 1.2.1 | MIT OR Apache-2.0 |
 | winapi | 0.3.9 | MIT/Apache-2.0 |
 | winapi-i686-pc-windows-gnu | 0.4.0 | MIT/Apache-2.0 |
@@ -498,15 +567,24 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | windows | 0.52.0 | MIT OR Apache-2.0 |
 | windows | 0.54.0 | MIT OR Apache-2.0 |
 | windows | 0.58.0 | MIT OR Apache-2.0 |
+| windows | 0.62.2 | MIT OR Apache-2.0 |
+| windows-collections | 0.3.2 | MIT OR Apache-2.0 |
 | windows-core | 0.52.0 | MIT OR Apache-2.0 |
 | windows-core | 0.54.0 | MIT OR Apache-2.0 |
 | windows-core | 0.58.0 | MIT OR Apache-2.0 |
+| windows-core | 0.62.2 | MIT OR Apache-2.0 |
+| windows-future | 0.3.2 | MIT OR Apache-2.0 |
 | windows-implement | 0.58.0 | MIT OR Apache-2.0 |
+| windows-implement | 0.60.2 | MIT OR Apache-2.0 |
 | windows-interface | 0.58.0 | MIT OR Apache-2.0 |
+| windows-interface | 0.59.3 | MIT OR Apache-2.0 |
 | windows-link | 0.2.1 | MIT OR Apache-2.0 |
+| windows-numerics | 0.3.1 | MIT OR Apache-2.0 |
 | windows-result | 0.1.2 | MIT OR Apache-2.0 |
 | windows-result | 0.2.0 | MIT OR Apache-2.0 |
+| windows-result | 0.4.1 | MIT OR Apache-2.0 |
 | windows-strings | 0.1.0 | MIT OR Apache-2.0 |
+| windows-strings | 0.5.1 | MIT OR Apache-2.0 |
 | windows-sys | 0.45.0 | MIT OR Apache-2.0 |
 | windows-sys | 0.48.0 | MIT OR Apache-2.0 |
 | windows-sys | 0.52.0 | MIT OR Apache-2.0 |
@@ -515,6 +593,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | windows-targets | 0.42.2 | MIT OR Apache-2.0 |
 | windows-targets | 0.48.5 | MIT OR Apache-2.0 |
 | windows-targets | 0.52.6 | MIT OR Apache-2.0 |
+| windows-threading | 0.2.1 | MIT OR Apache-2.0 |
 | windows_aarch64_gnullvm | 0.42.2 | MIT OR Apache-2.0 |
 | windows_aarch64_gnullvm | 0.48.5 | MIT OR Apache-2.0 |
 | windows_aarch64_gnullvm | 0.52.6 | MIT OR Apache-2.0 |
@@ -546,6 +625,8 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | x11rb-protocol | 0.13.2 | MIT OR Apache-2.0 |
 | x509-cert | 0.2.5 | Apache-2.0 OR MIT |
 | x509-parser | 0.18.1 | MIT OR Apache-2.0 |
+| xcap | 0.9.10 | Apache-2.0 |
+| xcb | 1.7.1 | MIT |
 | xcursor | 0.3.11 | MIT |
 | xdg-home | 1.3.0 | MIT |
 | xkbcommon-dl | 0.4.2 | MIT |
@@ -555,11 +636,15 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | yoke | 0.8.4 | Unicode-3.0 |
 | yoke-derive | 0.8.4 | Unicode-3.0 |
 | zbus | 4.4.0 | MIT |
+| zbus | 6.2.1 | MIT |
 | zbus-lockstep | 0.4.4 | MIT |
 | zbus-lockstep-macros | 0.4.4 | MIT |
 | zbus_macros | 4.4.0 | MIT |
+| zbus_macros | 6.2.1 | MIT |
 | zbus_names | 3.0.0 | MIT |
+| zbus_utils | 6.1.0 | MIT |
 | zbus_xml | 4.0.0 | MIT |
+| zcheapstr | 1.2.0 | MIT |
 | zerocopy | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | zerocopy-derive | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | zerofrom | 0.1.8 | Unicode-3.0 |
@@ -571,6 +656,7 @@ Resolved root Cargo.lock packages, including optional/platform/test dependencies
 | zerovec-derive | 0.11.7 | Unicode-3.0 |
 | zlib-rs | 0.6.8 | Zlib |
 | zmij | 1.0.23 | MIT |
+| zruntime | 0.2.2 | MIT |
 | zune-core | 0.5.3 | MIT OR Apache-2.0 OR Zlib |
 | zune-jpeg | 0.5.15 | MIT OR Apache-2.0 OR Zlib |
 | zvariant | 4.2.0 | MIT |

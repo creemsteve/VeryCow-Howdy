@@ -2,19 +2,17 @@
 use anyhow::Result;
 use serde_json::json;
 use std::{
-    io::{BufReader, Write},
-    net::TcpStream,
     sync::{Arc, Mutex},
     time::Duration,
 };
 use vch_core::{
     client::ClientCore,
     codec::float_bytes,
-    crypto, http,
+    crypto,
     models::*,
     server::{ChatServer, RunningServer},
     vault::Vault,
-    voice::{AudioBackend, VoiceBridge, VoiceDriver, VoiceSession},
+    voice::{AudioBackend, VoiceDriver, VoiceSession},
 };
 use zeroize::Zeroizing;
 #[derive(Default)]
@@ -57,38 +55,9 @@ impl AudioBackend for Synthetic {
 fn vault(p: impl AsRef<std::path::Path>) -> Vault {
     Vault::open(p, Zeroizing::new("voice fixture password".into())).unwrap()
 }
-fn bridge_request(
-    address: std::net::SocketAddr,
-    path: &str,
-    token: Option<&str>,
-    origin: Option<&str>,
-    host: Option<&str>,
-) -> http::Reply {
-    let mut socket = TcpStream::connect(address).unwrap();
-    socket
-        .set_read_timeout(Some(Duration::from_secs(20)))
-        .unwrap();
-    write!(
-        socket,
-        "{} {path} HTTP/1.1\r\nHost: {}\r\nContent-Length: 2\r\n",
-        if token.is_some() { "POST" } else { "GET" },
-        host.map(str::to_owned)
-            .unwrap_or_else(|| address.to_string())
-    )
-    .unwrap();
-    if let Some(token) = token {
-        write!(socket, "X-VCH-Token: {token}\r\n").unwrap();
-    }
-    if let Some(origin) = origin {
-        write!(socket, "Origin: {origin}\r\n").unwrap();
-    }
-    socket.write_all(b"\r\n{}").unwrap();
-    socket.flush().unwrap();
-    http::read_reply(&mut BufReader::new(socket)).unwrap()
-}
 #[cfg(feature = "neural")]
 #[test]
-fn native_voice_sessions_signatures_replay_and_bridge_security() {
+fn native_voice_sessions_signatures_replay_and_lifecycle() {
     let dir = tempfile::tempdir_in("target").unwrap();
     let mut s = ChatServer::open(vault(dir.path().join("server.vault"))).unwrap();
     s.set_password(Zeroizing::new("voice join password".into()))
@@ -265,54 +234,7 @@ fn native_voice_sessions_signatures_replay_and_bridge_security() {
         .unwrap()
         .request("/video/stop", json!({"stream":stream}))
         .unwrap();
-    let mut bridge = VoiceBridge::start(av.clone()).unwrap();
-    let uri = url::Url::parse(&bridge.uri(false)).unwrap();
-    let query = format!("token={}", uri.fragment().unwrap());
-    let token = url::form_urlencoded::parse(query.as_bytes())
-        .next()
-        .unwrap()
-        .1
-        .into_owned();
-    for path in [
-        "/",
-        "/video.html",
-        "/video.html?reopen=1",
-        "/video.js",
-        "/fonts/IBMPlexMono-Regular.ttf",
-    ] {
-        assert_eq!(
-            bridge_request(bridge.address, path, None, None, None).status,
-            200
-        );
-    }
-    assert_eq!(
-        bridge_request(bridge.address, "/settings", Some(&token), None, None).status,
-        200
-    );
-    assert_eq!(
-        bridge_request(bridge.address, "/settings", Some("bad"), None, None).status,
-        400
-    );
-    assert_eq!(
-        bridge_request(
-            bridge.address,
-            "/settings",
-            Some(&token),
-            Some("https://attacker.invalid"),
-            None
-        )
-        .status,
-        400
-    );
-    assert_eq!(
-        bridge_request(bridge.address, "/", None, None, Some("localhost")).status,
-        400
-    );
-    assert_eq!(
-        bridge_request(bridge.address, "/missing", None, None, None).status,
-        400
-    );
-    bridge.stop();
+    av.lock().unwrap().close();
     assert!(av.lock().unwrap().request("/settings", json!({})).is_err());
     assert!(ad.step(true).is_err());
     assert!(!ad.audio.recording);

@@ -170,7 +170,7 @@ impl ChatServer {
     pub fn set_password(&mut self, password: Zeroizing<String>) -> Result<()> {
         anyhow::ensure!(
             password.chars().count() >= 12,
-            "Server password requires at least 12 characters"
+            "Join password requires at least 12 characters"
         );
         let replacing = self.state.password_verifier.is_some();
         let salt = crypto::random(16);

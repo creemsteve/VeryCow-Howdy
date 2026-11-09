@@ -247,6 +247,63 @@ fn real_https_tor_chat_rotation_and_archives() {
 }
 
 #[test]
+fn legacy_java_vault_serves_pinned_tls12_and_tls13() {
+    let f: Value = serde_json::from_str(include_str!("fixtures/java.json")).unwrap();
+    let dir = tempfile::tempdir_in("target").unwrap();
+    let path = dir.path().join("server.vault");
+    std::fs::write(
+        &path,
+        crypto::unb64(f["serverVault"].as_str().unwrap()).unwrap(),
+    )
+    .unwrap();
+    let core = ChatServer::open(
+        Vault::open(&path, Zeroizing::new("compatibility password".into())).unwrap(),
+    )
+    .unwrap();
+    let original_store = core.state.tls_store.clone();
+    let expected = core.fingerprint().to_owned();
+    let core = Arc::new(Mutex::new(core));
+    let running = RunningServer::start(core.clone(), "127.0.0.1", 0).unwrap();
+    for version in [&rustls::version::TLS12, &rustls::version::TLS13] {
+        let pin = PinVerifier::new(Some(&expected)).unwrap();
+        let config = rustls::ClientConfig::builder_with_provider(Arc::new(
+            rustls::crypto::ring::default_provider(),
+        ))
+        .with_protocol_versions(&[version])
+        .unwrap()
+        .dangerous()
+        .with_custom_certificate_verifier(pin.clone())
+        .with_no_client_auth();
+        let socket = TcpStream::connect(running.address).unwrap();
+        socket
+            .set_read_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        socket
+            .set_write_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        let connection = rustls::ClientConnection::new(
+            Arc::new(config),
+            rustls::pki_types::ServerName::try_from("localhost").unwrap(),
+        )
+        .unwrap();
+        let mut stream = rustls::StreamOwned::new(connection, socket);
+        stream
+            .write_all(b"POST /api/poll HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2\r\n\r\n{}")
+            .unwrap();
+        stream.flush().unwrap();
+        assert_eq!(stream.conn.protocol_version(), Some(version.version));
+        assert_eq!(
+            http::read_reply(&mut std::io::BufReader::new(stream))
+                .unwrap()
+                .status,
+            401
+        );
+        assert_eq!(pin.fingerprint().unwrap(), expected);
+    }
+    assert_eq!(core.lock().unwrap().state.tls_store, original_store);
+}
+
+#[test]
 fn http_admission_headers_and_invalid_requests() {
     let dir = tempfile::tempdir_in("target").unwrap();
     let (core, _running) = server(dir.path());

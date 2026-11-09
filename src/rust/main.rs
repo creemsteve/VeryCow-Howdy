@@ -90,10 +90,14 @@ fn run(args: Args) -> Result<()> {
         #[cfg(not(feature = "desktop"))]
         anyhow::bail!("Build with desktop support to open the client or server GUI; use daemon for a headless server");
     }
-    let password = Zeroizing::new(rpassword::prompt_password("Vault password: ")?);
+    let password = Zeroizing::new(rpassword::prompt_password(
+        "Server vault password (unlocks server data on this host): ",
+    )?);
     let mut server = ChatServer::open(Vault::open(data.join("data.vault"), password)?)?;
     if args.set_join_password || server.state.password_verifier.is_none() {
-        let password = Zeroizing::new(rpassword::prompt_password("New server join password: ")?);
+        let password = Zeroizing::new(rpassword::prompt_password(
+            "New join password (grants members access to this server): ",
+        )?);
         let confirm = Zeroizing::new(rpassword::prompt_password("Confirm join password: ")?);
         anyhow::ensure!(*password == *confirm, "Passwords do not match");
         server.set_password(password)?;

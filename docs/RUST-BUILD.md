@@ -5,7 +5,6 @@ Install the stable Rust toolchain and an OS-native linker/build environment. The
 ```powershell
 ./scripts/build.ps1 -Debug
 ./scripts/test.ps1
-./scripts/test.ps1 -Browser
 ./scripts/test.ps1 -Coverage
 ./scripts/build.ps1 -Package -Destination releases/v0.2.0-rust
 ```
@@ -26,7 +25,7 @@ cargo run --release -- daemon --bind 0.0.0.0 --port 585
 
 The default build includes the desktop UI, system audio and neural codec. A server-only build uses `cargo build --release --no-default-features` and runs `vch daemon`. A source-only test without DAC assets can use `scripts/test.ps1 -AllowMissingModels`; that skips full voice inference/session verification.
 
-Voice needs `dac.json`, `dac-encoder.onnx` and `dac-decoder.onnx` in `build/models`, or a directory selected by `--models`. The existing model-export script produces these files. ONNX Runtime is loaded natively: place the platform runtime library in the model directory or set `ORT_DYLIB_PATH` to its absolute path. On this Windows checkout, `build/models/onnxruntime.dll` is the pinned native ONNX Runtime 1.23.2 library. No JVM or Python process runs in the Rust application. Python is used only for model export and browser test automation.
+Voice needs `dac.json`, `dac-encoder.onnx` and `dac-decoder.onnx` in `build/models`, or a directory selected by `--models`. The existing model-export script produces these files. ONNX Runtime is loaded natively: place the platform runtime library in the model directory or set `ORT_DYLIB_PATH` to its absolute path. On this Windows checkout, `build/models/onnxruntime.dll` is the pinned native ONNX Runtime 1.23.2 library. No JVM or Python process runs in the Rust application. Python is used only for model export and development tooling. Native video uses source-built OpenH264, XCap and Nokhwa; it does not require a browser, JavaScript engine or external capture program. Linux desktop builds also need the capture libraries documented by XCap (XCB, PipeWire/GBM and Clang development packages) and Video4Linux headers.
 
 `vch codec --models DIRECTORY` accepts the existing JSON-lines `init`/`encode`/`decode` protocol on stdin, which is useful for codec tooling and tests.
 
