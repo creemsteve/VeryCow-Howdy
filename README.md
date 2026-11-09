@@ -2,7 +2,7 @@
 
 Private communities with a native Rust desktop client, server console and headless server, encrypted local archives, text/image channels, friends, roles, push-to-talk voice, and optional webcam/screen sharing.
 
-The desktop client and server are implemented in Rust. The Java source, Maven build and legacy Java tooling have been removed. Android support has been removed for now. See [migration details](docs/RUST-MIGRATION.md) and the [verification record and environment limits](docs/RUST-VERIFICATION.md).
+The desktop client and server are implemented in Rust. VCH Flip adds a native Android keypad interface over the same current Rust client and media core, targeting the Sonim XP3plus 5G (AOSP 14, 240×320). Its signed preview includes chat/images, profiles, friends/calls, voice/video, Tor, roles and server/channel management. See [Android build, installation and verification](docs/ANDROID.md), [migration details](docs/RUST-MIGRATION.md) and the [desktop verification record](docs/RUST-VERIFICATION.md).
 
 ## Build and run
 
@@ -31,4 +31,6 @@ The existing vault format, identities, certificate pins, account hashes, SRP exc
 
 The server generates and holds channel keys, so its operator can decrypt channel content. This is server-managed encryption. Local archives retain Argon2id and AES-256-GCM; identities retain ML-DSA-65. The original [security model](docs/SECURITY.md) and [media documentation](docs/VOICE.md) describe the protocol; [Rust migration notes](docs/RUST-MIGRATION.md) identify implementation and verification differences.
 
-Historical release notes and previously generated packages describe older Java releases; the current source build and native package have no Java runtime or build dependency.
+Historical release notes and previously generated packages describe older Java releases; the current desktop source build and native desktop package have no Java runtime or build dependency.
+
+VCH Flip is built separately with `scripts/build-android.ps1 -Release`. It uses Java for native Android widgets/devices and JNI for the current Rust core; it does not restore the old Java Android client or change the Rust desktop build. Physical Sonim and Android media-device execution remain unverified; the first Android release is a preview.

@@ -10,6 +10,7 @@ pub mod desktop;
 pub mod http;
 pub mod images;
 pub mod limiter;
+pub mod mobile;
 pub mod models;
 pub mod server;
 pub mod tls;

@@ -1,0 +1,82 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'chat.vch.flip'
+    compileSdk 35
+    ndkVersion '27.2.12479018'
+    defaultConfig {
+        applicationId 'chat.vch.flip'
+        minSdk 29
+        targetSdk 35
+        versionCode 201
+        versionName '0.2.1'
+        testInstrumentationRunner 'chat.vch.flip.FlipInstrumentation'
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+    signingConfigs {
+        release {
+            if (System.getenv('VCH_ANDROID_KEYSTORE')) {
+                storeFile file(System.getenv('VCH_ANDROID_KEYSTORE'))
+                storePassword System.getenv('VCH_ANDROID_STORE_PASSWORD')
+                keyAlias System.getenv('VCH_ANDROID_KEY_ALIAS') ?: 'vch-flip'
+                keyPassword System.getenv('VCH_ANDROID_KEY_PASSWORD') ?: System.getenv('VCH_ANDROID_STORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    packaging.resources.excludes += ['META-INF/versions/**', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA']
+    packaging.jniLibs.useLegacyPackaging = true
+    sourceSets.main {
+        jniLibs.srcDirs = ['build/rustJniLibs']
+        assets.srcDirs = ['build/generated/mobileAssets']
+    }
+    androidResources { noCompress += ['onnx'] }
+    lint { abortOnError true }
+}
+def sourceCommit = providers.exec {
+    workingDir rootProject.projectDir.parentFile
+    commandLine 'git', 'rev-parse', 'HEAD'
+}.standardOutput.asText.map { it.trim() }
+def sourceStatus = providers.exec {
+    workingDir rootProject.projectDir.parentFile
+    commandLine 'git', 'status', '--porcelain'
+}.standardOutput.asText.map { it.trim() }
+tasks.register('mobileBuildInfo') {
+    inputs.property 'commit', sourceCommit
+    inputs.property 'status', sourceStatus
+    outputs.file layout.buildDirectory.file('generated/mobileBuildInfo/vch-build.json')
+    doLast {
+        def output = layout.buildDirectory.file('generated/mobileBuildInfo/vch-build.json').get().asFile
+        output.parentFile.mkdirs()
+        output.text = groovy.json.JsonOutput.toJson([version: '0.2.1', commit: sourceCommit.get(), dirty: !sourceStatus.get().isEmpty()])
+    }
+}
+tasks.register('mobileAssets', Sync) {
+    dependsOn 'mobileBuildInfo'
+    from(layout.buildDirectory.dir('generated/mobileBuildInfo'))
+    from('../../build/models') { include 'dac.json', 'dac-encoder.onnx', 'dac-decoder.onnx' }
+    from('../../licenses') { into 'licenses' }
+    from('../../src/main/resources/fonts/OFL.txt') { into 'licenses' }
+    from('../../LICENSE')
+    from('../../docs/RUST-DEPENDENCIES.md') { into 'licenses' }
+    into 'build/generated/mobileAssets'
+}
+tasks.named('preBuild').configure { dependsOn 'mobileAssets' }
+tasks.register('checkReleaseSigning') {
+    doLast { if (!System.getenv('VCH_ANDROID_KEYSTORE')) throw new GradleException('Set VCH_ANDROID_KEYSTORE and signing passwords before building a release.') }
+}
+tasks.matching { it.name == 'validateSigningRelease' }.configureEach { dependsOn 'checkReleaseSigning' }
+dependencies {
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.23.2'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+}

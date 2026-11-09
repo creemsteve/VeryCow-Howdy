@@ -1,6 +1,6 @@
 # Desktop verification record
 
-Verified on Windows x64 on 2026-11-09. The current desktop client/server source and build paths are Rust; the Java application, tests, Maven descriptor, dependency bootstrap and legacy comparison/build tools have been removed. Android is outside the current scope.
+Verified on Windows x64 on 2026-11-09. The current desktop client/server source and build paths are Rust; the legacy Java desktop application, tests, Maven descriptor, dependency bootstrap and comparison/build tools have been removed. The new VCH Flip Android client has a separate [verification record](ANDROID.md); desktop verification does not establish handset compatibility.
 
 ## Completed checks
 

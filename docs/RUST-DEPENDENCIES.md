@@ -1,6 +1,6 @@
 # Rust dependency licenses
 
-Resolved Cargo.lock packages, including optional/platform/test dependencies. Runtime selection depends on target and enabled features. Upstream cross-platform crates can list Android dependencies without VCH providing an Android application. Source and license texts are in the corresponding Cargo registry packages.
+Resolved root Cargo.lock packages, including optional/platform/test dependencies. Runtime selection depends on target and enabled features. The VCH Flip JNI library has its own resolution in `android/native/Cargo.lock` and depends on the current root crate with `neural` enabled and desktop/audio backends disabled. Source and license texts are in the corresponding Cargo registry packages.
 
 | Package | Version | Declared license |
 | --- | --- | --- |

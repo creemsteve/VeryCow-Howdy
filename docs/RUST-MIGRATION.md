@@ -1,6 +1,6 @@
 # Rust migration status
 
-The native desktop client, desktop/server console, headless server, protocol, storage, cryptography and media control have Rust implementations in `src/rust`. Cargo is the default build. Browser voice/video presentation and capture use HTML and JavaScript assets. Android is outside the current scope: both Android projects, the Rust mobile controller, JNI/Kotlin adapters, Android-only UI assets, tests and build scripts have been removed.
+The native desktop client, desktop/server console, headless server, protocol, storage, cryptography and media control have Rust implementations in `src/rust`. Cargo is the default desktop build. Browser voice/video presentation and capture use HTML and JavaScript assets. The desktop migration removed the prior Android projects. The subsequent [VCH Flip client](ANDROID.md) supplies a new native keypad UI and JNI adapter over the current Rust client, vault and media core; it does not reinstate the legacy Android implementation.
 
 The Java application/test sources, Maven descriptor, Java dependency bootstrap, live Java comparison oracle and legacy build/package scripts have been removed. Before removal, the live Java/Rust interoperability check passed in both directions, including authentication, signed encrypted messages and decryption. Rust regression tests retain the synthetic compatibility fixtures.
 
