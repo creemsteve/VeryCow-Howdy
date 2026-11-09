@@ -1,7 +1,6 @@
-"""Native desktop / Android-page protocol compatibility; all audio is synthetic."""
+"""Native desktop / browser-panel protocol compatibility; all audio is synthetic."""
 from pathlib import Path
 import json
-import os
 import subprocess
 import time
 import uuid
@@ -10,7 +9,6 @@ from playwright.sync_api import sync_playwright
 root = Path(__file__).resolve().parent.parent
 fixture = root / "build" / ("voice-interop-" + uuid.uuid4().hex)
 fixture.mkdir(parents=True)
-classpath = os.pathsep.join(["build/classes", "build/test-classes", "lib/*"])
 
 
 def state():
@@ -29,8 +27,8 @@ def wait_for(predicate):
 
 
 with (fixture / "host.log").open("w") as log:
-    host = subprocess.Popen(["java", "-Xmx1400m", "--add-modules", "jdk.httpserver", "-cp", classpath,
-                             "chat.vch.VoiceTestHost", "native", str(fixture)], cwd=root, stdout=log, stderr=log)
+    host = subprocess.Popen([str(root / "target/debug/examples/relay-fixture.exe"),
+                             "native", str(fixture)], cwd=root, stdout=log, stderr=log)
     try:
         wait_for(lambda: (fixture / "endpoints.json").exists() and state().get("ready"))
         endpoint = json.loads((fixture / "endpoints.json").read_text())["bob"]
@@ -45,7 +43,7 @@ with (fixture / "host.log").open("w") as log:
             page.locator("#start").click()
             page.wait_for_function("() => running === true", timeout=60000)
             page.wait_for_function("() => participants === 1", timeout=30000)
-            print("PASS native desktop shares the server voice relay with the Android-compatible panel")
+            print("PASS native desktop shares the server voice relay with the browser voice panel")
             page.evaluate("begin()")
             wait_for(lambda: state().get("received", 0) > 0)
             page.evaluate("end()")

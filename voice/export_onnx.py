@@ -1,4 +1,4 @@
-"""Export the pinned 16 kHz DAC model for shared Java/Android inference."""
+"""Export the pinned 16 kHz DAC model for native Rust inference."""
 from pathlib import Path
 import json, torch, dac
 

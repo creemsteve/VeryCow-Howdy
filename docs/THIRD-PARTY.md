@@ -1,18 +1,13 @@
 # Third-party components
 
-| Component | Pinned version | License / upstream |
+The Rust dependency versions and declared licenses are listed in [RUST-DEPENDENCIES.md](RUST-DEPENDENCIES.md) and pinned by `Cargo.lock`. Cargo registry packages retain their upstream license texts.
+
+| Additional runtime asset | Version | License / upstream |
 | --- | --- | --- |
-| Gson | 2.11.0 | Apache-2.0; https://github.com/google/gson |
-| Bouncy Castle provider, PKIX and utility | 1.83 | MIT; https://www.bouncycastle.org/licence.html |
-| WebP ImageIO | 0.11.0 | Apache-2.0; https://github.com/usefulness/webp-imageio |
-| libwebp (inside image encoder) | Upstream native build included with WebP ImageIO | BSD-style; https://chromium.googlesource.com/webm/libwebp/+/refs/heads/main/COPYING |
-| Kotlin standard library | 2.4.0 | Apache-2.0; https://github.com/JetBrains/kotlin |
-| ONNX Runtime Java / Android | 1.23.2 | MIT; https://github.com/microsoft/onnxruntime |
-| DAC code and 16 kHz model | Python package 1.0.0, model tag 0.0.5 | MIT; https://github.com/descriptinc/descript-audio-codec |
-| Eclipse Temurin runtime (Windows app images) | Local JDK 17.0.20.101 | GPLv2 with Classpath Exception; runtime/legal directories included |
+| ONNX Runtime native library | 1.23.2 | MIT; https://github.com/microsoft/onnxruntime |
+| DAC 16 kHz model | Model tag 0.0.5; export package 1.0.0 | MIT; https://github.com/descriptinc/descript-audio-codec |
+| IBM Plex Sans and IBM Plex Mono fonts | Bundled fonts | SIL Open Font License; `src/main/resources/fonts/OFL.txt`; https://github.com/IBM/plex |
 
-Dependency JARs retain their embedded notices. The Windows app images retain runtime notices. `licenses/` contains additional upstream license copies, including the model license. Build-only tools and Python packages are not part of the Java/Android product runtime. Android's platform WebView is supplied by the operating system. Voice uses the platform audio APIs and the existing HTTPS transport. Historical WebRTC license copies remain in `licenses/` for earlier packages.
+`licenses/` includes model/runtime notices and retained historical notices for older releases. No JAR or JRE is included in the current native package. Python packages used for model export and browser testing are development tools, not application runtime dependencies.
 
-The maintained WebP ImageIO fork declares Apple Silicon support in its [upstream README](https://github.com/usefulness/webp-imageio); the bundled native entries cover macOS x64/ARM64, Linux x64/ARM variants and Windows x64/x86. This has been inspected in the JAR but only the Windows x64 encoder has been executed here.
-
-Optional video uses codecs supplied by the desktop browser (WebCodecs) and Android system (MediaCodec/Camera2/MediaProjection). No native video codec binaries are redistributed by VCH; platform codec availability, hardware acceleration and applicable codec licensing depend on that platform.
+Optional video uses WebCodecs supplied by the desktop browser. No native video codec binaries are redistributed by VCH; codec availability, hardware acceleration and applicable codec licensing depend on that platform.

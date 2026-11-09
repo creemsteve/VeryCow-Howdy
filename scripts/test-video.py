@@ -1,7 +1,6 @@
 """Real relay and browser codecs, with synthetic webcam and synthetic screen sources."""
 from pathlib import Path
 import json
-import os
 import subprocess
 import time
 import uuid
@@ -10,12 +9,11 @@ from playwright.sync_api import sync_playwright
 root = Path(__file__).resolve().parent.parent
 fixture = root / 'build' / ('video-browser-' + uuid.uuid4().hex)
 fixture.mkdir(parents=True)
-classpath = os.pathsep.join(['build/classes', 'build/test-classes', 'lib/*'])
 with (fixture / 'host.log').open('w') as log:
-    host = subprocess.Popen(['java', '--add-modules', 'jdk.httpserver', '-cp', classpath,
-                             'chat.vch.VoiceTestHost', 'video', str(fixture)], cwd=root, stdout=log, stderr=log)
+    host = subprocess.Popen([str(root / 'target/debug/examples/relay-fixture.exe'),
+                             'video', str(fixture)], cwd=root, stdout=log, stderr=log)
     try:
-        end = time.monotonic() + 30
+        end = time.monotonic() + 60
         while not (fixture / 'endpoints.json').exists():
             if host.poll() is not None or time.monotonic() > end:
                 raise AssertionError((fixture / 'host.log').read_text())

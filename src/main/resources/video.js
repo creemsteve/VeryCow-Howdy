@@ -25,7 +25,6 @@ window.VchVideo=(()=>{
         if(s.video){s.video.srcObject=null;s.video.remove()}
         if(s.encoder&&s.encoder.state!=='closed')s.encoder.close();
         s.button.textContent=source==='screen'?'Share screen':'Start webcam';s.button.disabled=!active;
-        if(s.native){try{window.VchNative.stopVideo(source)}catch(e){}}
         if(s.id)try{await api('/video/stop',{stream:s.id})}catch(e){}
     }
     async function start(source,button,input){
@@ -34,12 +33,6 @@ window.VchVideo=(()=>{
         try{
             const kbps=Number(input.value);if(!Number.isInteger(kbps)||kbps<50||kbps>1000)throw Error('Choose 50–1000 kbps.');
             s.kbps=kbps;
-            if(window.VchNative?.startVideo){
-                s.native=true;
-                const result=JSON.parse(window.VchNative.startVideo(source,kbps));if(result.error)throw Error(result.error);
-                button.textContent='Stop '+(source==='screen'?'screen share':'webcam');button.disabled=false;
-                message('Approve the device capture prompt to start sharing.');return;
-            }
             // Invoke screen selection directly from the click, before awaiting codec negotiation.
             s.capture=source==='screen'?await navigator.mediaDevices.getDisplayMedia({video:{frameRate:8},audio:false}):await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:360},frameRate:{ideal:8,max:8}},audio:false});
             if(s.stopped||!active){s.capture.getTracks().forEach(t=>t.stop());return}
@@ -83,9 +76,9 @@ window.VchVideo=(()=>{
             input.type='number';input.min='50';input.max='1000';input.step='50';input.value='500';input.setAttribute('aria-label',(source==='screen'?'Screen':'Webcam')+' bitrate in kbps');
             label.append(source==='screen'?'Screen bitrate (kbps, max 1000) ':'Webcam bitrate (kbps, max 1000) ',input);row.append(label,button);$('video-controls').append(row);
             button.textContent=source==='screen'?'Share screen':'Start webcam';button.onclick=()=>start(source,button,input);
-            if(source==='screen'&&!navigator.mediaDevices?.getDisplayMedia&&!window.VchNative?.startVideo){button.disabled=true;button.title='Screen capture is unavailable on this device'}
+            if(source==='screen'&&!navigator.mediaDevices?.getDisplayMedia){button.disabled=true;button.title='Screen capture is unavailable on this device'}
             input.onchange=async()=>{const s=local.get(source),kbps=Number(input.value);if(!Number.isInteger(kbps)||kbps<50||kbps>1000){input.value=String(s?.kbps||500);message('Choose 50–1000 kbps.');return}if(!s)return;
-                input.disabled=true;try{if(s.native){const out=JSON.parse(window.VchNative.configureVideo(source,kbps));if(out.error)throw Error(out.error);s.kbps=kbps}else if(s.id){await api('/video/configure',{stream:s.id,kbps});s.kbps=kbps;s.config.bitrate=kbps*750;s.encoder.configure(s.config)}}catch(e){message(e.message);await stop(source)}finally{input.disabled=false}};
+                input.disabled=true;try{if(s.id){await api('/video/configure',{stream:s.id,kbps});s.kbps=kbps;s.config.bitrate=kbps*750;s.encoder.configure(s.config)}}catch(e){message(e.message);await stop(source)}finally{input.disabled=false}};
         }
         const hint=document.createElement('small');hint.textContent='Each stream: 50–1000 kbps. Hardware encoding is preferred when available. Select Receive for each incoming stream.';$('video-controls').append(hint);
     }
@@ -123,5 +116,5 @@ window.VchVideo=(()=>{
     }catch(e){if(active&&ticket===epoch){message(e.message);await disconnect()}}finally{busy=false}}
     async function connect(request,who){if(active)return;api=request;account=who;active=true;epoch++;cursor=-1;controls();message('Connected · incoming video is off until you select Receive.');timer=setInterval(poll,250);await poll()}
     async function disconnect(){active=false;epoch++;clearInterval(timer);await Promise.all([...local.keys()].map(stop));for(const id of remote.keys())removeRemote(id);for(const b of $('video-controls').querySelectorAll('button'))b.disabled=true}
-    return {connect,disconnect,nativeStopped(source,error){stop(source);if(error)message(error)}};
+    return {connect,disconnect};
 })();

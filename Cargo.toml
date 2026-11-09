@@ -1,0 +1,74 @@
+[package]
+name = "vch"
+version = "0.2.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Private communities with encrypted archives and authenticated media relays"
+default-run = "vch"
+
+[lib]
+name = "vch_core"
+path = "src/rust/lib.rs"
+
+[[bin]]
+name = "vch"
+path = "src/rust/main.rs"
+
+[[bin]]
+name = "vch-client"
+path = "src/rust/bin/client.rs"
+required-features = ["desktop"]
+
+[[bin]]
+name = "vch-server"
+path = "src/rust/bin/server.rs"
+required-features = ["desktop"]
+
+[[example]]
+name = "desktop-fixture"
+required-features = ["desktop"]
+
+[features]
+default = ["desktop", "audio", "neural"]
+desktop = ["dep:eframe", "dep:rfd", "dep:webbrowser"]
+audio = ["dep:cpal"]
+neural = ["dep:ort"]
+
+[dependencies]
+anyhow = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+sha2 = "0.10"
+hmac = "0.12"
+pbkdf2 = "0.12"
+argon2 = "0.5"
+aes-gcm = "0.10"
+rand = "0.8"
+zeroize = { version = "1", features = ["derive"] }
+num-bigint = { version = "0.4", features = ["rand"] }
+num-traits = "0.2"
+flate2 = "1"
+ml-dsa = { version = "0.1.1", features = ["pkcs8"] }
+rustls = { version = "0.23", default-features = false, features = ["std", "ring", "tls12"] }
+rcgen = "0.13"
+x509-parser = "0.18"
+p12-keystore = "0.2"
+url = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+fs2 = "0.4"
+tempfile = "3"
+clap = { version = "4", features = ["derive"] }
+rpassword = "7"
+ctrlc = "3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+eframe = { version = "0.29.1", optional = true }
+rfd = { version = "0.14.1", optional = true }
+webbrowser = { version = "1", optional = true }
+cpal = { version = "0.15", optional = true }
+ort = { version = "=2.0.0-rc.10", default-features = false, features = ["std", "load-dynamic"], optional = true }
+
+[profile.release]
+lto = "thin"
+strip = true

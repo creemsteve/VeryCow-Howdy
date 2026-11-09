@@ -1,3 +1,7 @@
+param([string]$Data)
 $ErrorActionPreference='Stop'
-Set-Location (Split-Path $PSScriptRoot -Parent)
-& java --add-modules jdk.httpserver -cp 'build/app/*' chat.vch.ServerApp
+$root=Split-Path $PSScriptRoot -Parent
+Set-Location $root
+$argsList=@('run','--locked','--release','--','server')
+if($Data){$argsList+=@('--data',$Data)}
+& cargo @argsList
