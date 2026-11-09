@@ -31,6 +31,18 @@ public final class ClientCore implements AutoCloseable {
         return exchange(server,path,data,auth,factory);
     }
     private JsonObject exchange(SavedServer server,String path,JsonObject data,boolean auth,SSLSocketFactory factory)throws Exception{
+        if (server.torOnly) {
+            String token = auth ? tokens.get(server.id) : null;
+            if (auth && token == null) throw new IOException("Server is disconnected");
+            TorTransport.Reply reply = TorTransport.post(new URL(ServerAddress.normalize(server.address) + "/api/" + path),server.torSocksPort,factory,Json.bytes(data),token);
+            if (auth && reply.status() == 401) tokens.remove(server.id);
+            if (reply.status() != 200) {
+                String error = "Server returned " + reply.status();
+                try { error = Json.str(Json.parse(reply.body()),"error"); } catch (Exception ignored) {}
+                throw new ApiException(reply.status(),error);
+            }
+            return Json.parse(reply.body());
+        }
         HttpsURLConnection c = (HttpsURLConnection)new URL(ServerAddress.normalize(server.address) + "/api/" + path).openConnection();
         c.setSSLSocketFactory(factory); c.setHostnameVerifier((h,session) -> true); // Exact certificate pin replaces public-CA hostname trust.
         c.setInstanceFollowRedirects(false); c.setConnectTimeout(7000); c.setReadTimeout(10000); c.setRequestMethod("POST"); c.setDoOutput(true);
@@ -50,6 +62,7 @@ public final class ClientCore implements AutoCloseable {
     public synchronized void connect(SavedServer s, char[] password) throws Exception {
         try {
             SavedServer candidate=new SavedServer();candidate.address=ServerAddress.normalize(s.address);
+            candidate.torOnly=s.torOnly;candidate.torSocksPort=s.torSocksPort;
             PinnedTls.Bootstrap bootstrap=new PinnedTls.Bootstrap(s.fingerprint);
             JsonObject challenge = exchange(candidate,"challenge",Json.obj(),false,bootstrap.factory());
             if(!JoinAuth.PROTOCOL.equals(Json.str(challenge,"auth")))throw new IOException("Update the server to VCH 0.1.2 or newer");
@@ -83,6 +96,10 @@ public final class ClientCore implements AutoCloseable {
     }
     public synchronized boolean connected(SavedServer s) { return tokens.containsKey(s.id); }
     public synchronized void disconnect(SavedServer s) { tokens.remove(s.id); }
+    public synchronized void connectionSettings(SavedServer s, boolean torOnly, int socksPort) throws Exception {
+        TorTransport.validatePort(socksPort);
+        disconnect(s); s.torOnly=torOnly; s.torSocksPort=socksPort; save();
+    }
     public synchronized void updateProfile(SavedServer s) throws Exception { request(s,"profile",Json.obj("name",state.name,"bio",state.bio,"avatar",state.avatar,"pronouns",state.pronouns),true); }
     public synchronized boolean poll(SavedServer s) throws Exception {
         JsonObject r = request(s,"poll",Json.obj("after",s.lastSequence),true);
@@ -167,7 +184,7 @@ public final class ClientCore implements AutoCloseable {
         if (!s.id.equals(e.server) || a == null || !Crypto.account(s.id,a.publicKey).equals(e.author) || !Crypto.verify(a.publicKey,e.signedBytes(),e.signature)) throw new IOException("Signature verification failed");
         String key = s.channelKeys.get(e.channel); if (key == null) throw new IOException("Channel key needed");
         List<String> candidates=new ArrayList<>();candidates.add(key);candidates.addAll(s.previousChannelKeys.getOrDefault(e.channel,List.of()));
-        for(String candidate:candidates)try{return Crypto.decompress(Crypto.open(Crypto.unb64(candidate),Crypto.unb64(e.cipher),e.aad()),e.kind.equals("images") ? 425000 : e.kind.equals("image") ? 100000 : e.kind.equals("voice") ? 32000 : 16000);}catch(javax.crypto.AEADBadTagException wrongKey){}
+        for(String candidate:candidates)try{return Crypto.decompress(Crypto.open(Crypto.unb64(candidate),Crypto.unb64(e.cipher),e.aad()),e.kind.equals("images") ? 425000 : e.kind.equals("image") ? 100000 : e.kind.equals("voice") ? 32000 : e.kind.startsWith("video/") ? 125000 : 16000);}catch(javax.crypto.AEADBadTagException wrongKey){}
         throw new IOException("This message needs a different channel key");
     }
     public synchronized void close() { tokens.clear(); vault.close(); }

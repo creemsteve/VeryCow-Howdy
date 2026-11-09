@@ -77,8 +77,10 @@ public final class IntegrationTest {
                 alice.request(sa,"call",Json.obj("action","cancel","id",canceledId),true);bob.poll(sb);check(bob.incomingCalls.get(sb.id).isEmpty(),"caller can cancel a ringing invitation");
 
                 alice.request(sa,"voice",Json.obj("channel",friendship.voiceChannel,"action","heartbeat"),true);bob.request(sb,"voice",Json.obj("channel",friendship.voiceChannel,"action","heartbeat"),true);
-                alice.request(sa,"voice",Json.obj("channel",friendship.voiceChannel,"action","signal","to",bob.account(sb),"data",Json.obj("candidate","friend-call")),true);
-                check(bob.request(sb,"voice",Json.obj("channel",friendship.voiceChannel,"action","heartbeat"),true).getAsJsonArray("signals").size()==1,"friend call signaling reaches friend");
+                alice.request(sa,"voice",Json.obj("channel",friendship.voiceChannel,"action","claim"),true);
+                Envelope callFrame=alice.envelope(sa,friendship.voiceChannel,"voice",Crypto.utf("call tokens"));
+                alice.request(sa,"voice",Json.obj("channel",friendship.voiceChannel,"action","media","envelope",callFrame),true);
+                check(bob.request(sb,"voice",Json.obj("channel",friendship.voiceChannel,"action","heartbeat","after",0),true).getAsJsonArray("frames").size()==1,"friend call audio is relayed through server");
                 bob.request(sb,"friend",Json.obj("account",alice.account(sa),"action","remove"),true);rejects(()->alice.request(sa,"call",Json.obj("action","ring","account",bob.account(sb)),true),"calling a removed friend is rejected");alice.poll(sa);check(sa.friendships.isEmpty()&&sa.channels.stream().noneMatch(c->c.id.equals(friendship.voiceChannel)),"removing friend revokes direct channels");
                 host.rotateChannelKey(text.id);bob.poll(sb);check(new String(bob.decrypt(sb,sb.messages.get(0)),java.nio.charset.StandardCharsets.UTF_8).equals("hello encrypted community"),"server key rotation preserves archived history");
                 Envelope replay=sa.messages.get(0);int old=host.state.messages.size();alice.request(sa,"send",Json.GSON.toJsonTree(replay).getAsJsonObject(),true);check(host.state.messages.size()==old,"repeated message ID deduplicated");
@@ -87,8 +89,9 @@ public final class IntegrationTest {
                 Channel voice=sa.channels.stream().filter(c->c.type.equals("voice")).findFirst().orElseThrow();
                 var fa=alice.request(sa,"voice",Json.obj("channel",voice.id,"action","claim"),true);var fb=bob.request(sb,"voice",Json.obj("channel",voice.id,"action","claim"),true);
                 check(Json.str(fa,"floor").equals(alice.account(sa))&&Json.str(fb,"floor").equals(alice.account(sa)),"half-duplex floor permits only one speaker");
-                alice.request(sa,"voice",Json.obj("channel",voice.id,"action","signal","to",bob.account(sb),"data",Json.obj("candidate",Json.obj("candidate","test"))),true);
-                fb=bob.request(sb,"voice",Json.obj("channel",voice.id,"action","heartbeat"),true);check(fb.getAsJsonArray("signals").size()==1,"voice signaling delivered to peer");
+                Envelope voiceFrame=alice.envelope(sa,voice.id,"voice",Crypto.utf("voice tokens"));
+                alice.request(sa,"voice",Json.obj("channel",voice.id,"action","media","envelope",voiceFrame),true);
+                fb=bob.request(sb,"voice",Json.obj("channel",voice.id,"action","heartbeat","after",0),true);check(fb.getAsJsonArray("frames").size()==1,"voice media delivered through server");
                 alice.request(sa,"voice",Json.obj("channel",voice.id,"action","release"),true);fb=bob.request(sb,"voice",Json.obj("channel",voice.id,"action","claim"),true);check(Json.str(fb,"floor").equals(bob.account(sb)),"floor transfers after push-to-talk release");
                 Channel privateChannel=new Channel();privateChannel.name="restricted";privateChannel.allow.add(alice.account(sa));host.state.channels.add(privateChannel);host.save();bob.poll(sb);check(sb.channels.stream().noneMatch(c->c.id.equals(privateChannel.id)),"private channel hidden from unauthorized account");
                 check(!sb.channelKeys.containsKey(privateChannel.id),"restricted channel encryption key is withheld from unauthorized accounts");

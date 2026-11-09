@@ -58,6 +58,8 @@ public final class Models {
     public static final class SavedServer {
         public String address, fingerprint, name, id, passwordKey, description = "", image = "";
         public boolean admin, roleManager;
+        public boolean torOnly;
+        public int torSocksPort = 9050;
         public List<Friendship> friendships = new ArrayList<>();
         public Set<String> friendRequests = new HashSet<>();
         public int joinProtocol;
@@ -70,11 +72,11 @@ public final class Models {
         public Map<String,Account> accounts = new HashMap<>();
         public List<Envelope> messages = new ArrayList<>();
         public long lastSequence;
-        public String toString() { return name == null ? address : name; }
+        public String toString() { return (name == null ? address : name) + (torOnly ? " [Tor only]" : ""); }
     }
     public static final class ClientState {
         public String name = "New member", bio = "", avatar = "", pronouns = "", publicKey, privateKey;
-        public String microphone = "Default", speakers = "Default", pttKey = "SPACE", iceUrls = "";
+        public String microphone = "Default", speakers = "Default", pttKey = "SPACE";
         public int inputGain = 100, outputGain = 100, outgoingBitRate = 6000;
         public int hardwarePttCode = 138;
         public boolean darkMode;

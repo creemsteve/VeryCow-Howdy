@@ -3,7 +3,7 @@ import chat.vch.Models.*;
 import java.nio.file.*;
 import java.net.ServerSocket;
 
-/** Dedicated local fixture for the browser-to-browser WebRTC test. */
+/** Dedicated local fixture for the browser-to-browser HTTPS voice relay test. */
 public final class VoiceTestHost {
     public static void main(String[] args)throws Exception{
         Path dir=Path.of("build/voice-fixture/"+java.util.UUID.randomUUID());Files.createDirectories(dir);
@@ -11,6 +11,17 @@ public final class VoiceTestHost {
             java.util.concurrent.atomic.AtomicLong joinClock=new java.util.concurrent.atomic.AtomicLong();ChatServer server=new ChatServer(sv,new JoinAttemptLimiter(joinClock::get));try(ServerSocket port=new ServerSocket(0)){server.state.port=port.getLocalPort();}server.state.hashBits=10;server.setPassword("test server password".toCharArray());server.start("127.0.0.1");
             ClientCore alice=new ClientCore(av),bob=new ClientCore(bv);SavedServer a=endpoint(server),b=endpoint(server);alice.connect(a,"test server password".toCharArray());joinClock.addAndGet(10000);bob.connect(b,"test server password".toCharArray());alice.poll(a);bob.poll(b);
             Channel channel=a.channels.stream().filter(c->c.type.equals("voice")).findFirst().orElseThrow();if(!a.channelKeys.get(channel.id).equals(b.channelKeys.get(channel.id)))throw new AssertionError("Automatic voice channel keys differ");
+            if(args.length>0&&args[0].equals("video")){
+                Path fixture=Path.of(args[1]);Files.createDirectories(fixture);
+                try(VoiceBridge va=new VoiceBridge(alice,a,channel);VoiceBridge vb=new VoiceBridge(bob,b,channel)){
+                    for(var pair:java.util.List.of(new Object[]{alice,a},new Object[]{bob,b}))((ClientCore)pair[0]).request((SavedServer)pair[1],"voice",Json.obj("channel",channel.id,"action","heartbeat"),true);
+                    Files.write(fixture.resolve("endpoints.json"),Json.bytes(Json.obj("alice",va.videoUri().toString(),"bob",vb.videoUri().toString())));
+                    long end=System.currentTimeMillis()+120000;
+                    while(System.currentTimeMillis()<end&&!Files.exists(fixture.resolve("stop"))){
+                        alice.request(a,"voice",Json.obj("channel",channel.id,"action","heartbeat"),true);bob.request(b,"voice",Json.obj("channel",channel.id,"action","heartbeat"),true);Thread.sleep(800);
+                    }
+                }finally{server.close();}return;
+            }
             if(args.length>0&&args[0].equals("native")){
                 Path fixture=Path.of(args[1]);Files.createDirectories(fixture);
                 DesktopVoiceTest.SyntheticAudio audio=new DesktopVoiceTest.SyntheticAudio();

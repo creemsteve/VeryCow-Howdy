@@ -14,8 +14,8 @@ with sync_playwright() as p:
         page.locator("#start").click()
         page.wait_for_function("() => running === true", timeout=60000)
     for page in [alice,bob]:
-        page.wait_for_function("() => [...connections.values()].some(p => p.dc && p.dc.readyState === 'open')",timeout=30000)
-    print("PASS two WebRTC peers connected with synthetic microphones")
+        page.wait_for_function("() => participants === 1",timeout=30000)
+    print("PASS two clients joined the HTTPS voice relay with synthetic microphones")
     alice.evaluate("begin()")
     alice.wait_for_function("() => transmitting === true")
     bob.wait_for_function("() => nextPlay > 0",timeout=30000)

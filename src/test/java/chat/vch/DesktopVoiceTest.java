@@ -8,7 +8,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.BooleanSupplier;
 
-/** Real native WebRTC + signed/encrypted DAC, using synthetic PCM and an in-memory playback sink. */
+/** Server-relayed signed/encrypted DAC, using synthetic PCM and an in-memory playback sink. */
 public final class DesktopVoiceTest {
     public static void main(String[] args) throws Exception {
         Path dir = Files.createDirectories(Path.of("build/native-voice-test/" + java.util.UUID.randomUUID()));
@@ -20,7 +20,9 @@ public final class DesktopVoiceTest {
                  ClientCore alice = new ClientCore(av); ClientCore bob = new ClientCore(bv)) {
                 try (ServerSocket port = new ServerSocket(0)) { host.state.port = port.getLocalPort(); }
                 host.state.hashBits = 10; host.setPassword("test server password".toCharArray()); host.start("127.0.0.1");
+                try (TorTransportTest.SocksFixture proxy = new TorTransportTest.SocksFixture(host.state.port)) {
                 SavedServer a = endpoint(host), b = endpoint(host);
+                a.torOnly = true; a.torSocksPort = proxy.port(); a.address = "https://voice-test.invalid:" + host.state.port;
                 alice.connect(a, "test server password".toCharArray()); clock.addAndGet(10000);
                 bob.connect(b, "test server password".toCharArray()); alice.poll(a); bob.poll(b);
                 Channel channel = a.channels.stream().filter(c -> c.type.equals("voice")).findFirst().orElseThrow();
@@ -31,7 +33,7 @@ public final class DesktopVoiceTest {
                     va.start(); vb.start();
                     waitFor(() -> as.get() != null && bs.get() != null && as.get().connected() == 1 && bs.get().connected() == 1, as, bs);
                     check(!aa.recording && !ba.recording, "joining keeps microphone capture stopped");
-                    System.out.println("PASS two native in-process WebRTC data peers connected");
+                    System.out.println("PASS Tor-routed desktop and direct desktop joined the server voice channel");
                     va.press(); waitFor(() -> aa.recording && ba.blocks.get() > 0, as, bs);
                     check(ba.energy > 0.00001, "decoded signed encrypted DAC has non-silent PCM");
                     System.out.println("PASS native capture, encrypted DAC delivery, decode and playback");
@@ -65,6 +67,7 @@ public final class DesktopVoiceTest {
                 finishOpen.countDown(); close.get(15, TimeUnit.SECONDS); racing.stopped().get(15, TimeUnit.SECONDS);
                 check(racingAudio.closed && !racingAudio.open, "concurrent device open/leave cannot leak audio devices");
                 System.out.println("PASS leaving concurrently with audio-device initialization closes devices");
+                }
             }
         }
     }

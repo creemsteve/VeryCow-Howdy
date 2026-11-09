@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VCH / Call video</title>
+<style>
+@font-face{font-family:IBM Plex Mono;src:url('/fonts/IBMPlexMono-Regular.ttf')}*{box-sizing:border-box}body{margin:0;background:#f4f4f4;color:#161616;font:16px 'IBM Plex Mono',monospace}header{background:#161616;color:white;padding:24px}main{max-width:1000px;margin:32px auto;padding:24px}button,input{font:inherit;padding:10px}button{background:#0f62fe;color:white;border:0;cursor:pointer}button:disabled{opacity:.45}section{background:white;padding:24px;margin:20px 0}canvas,video{max-width:100%;background:#161616}label{display:block;margin:12px 0}small{color:#525252}#video-status{line-height:1.6}
+</style>
+<header>VCH / Call video</header><main><h1>Screen sharing &amp; webcam</h1><p id="channel"></p>
+<p>Keep the desktop voice call connected. Each stream has its own bitrate and receive control. Video uses the encrypted server relay.</p>
+<section id="video-controls"></section><p id="video-status" role="status"></p><section id="video-streams"></section>
+<p><button id="stop-video">Stop video &amp; close panel</button></p></main>
+<script>
+'use strict';
+const token=decodeURIComponent(location.hash.slice(1));history.replaceState(null,'',location.pathname);
+async function api(path,data={}){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json','X-VCH-Token':token},body:JSON.stringify(data)});const j=await r.json();if(!r.ok)throw Error(j.error||'Video request failed');return j}
+</script><script src="/video.js"></script><script>
+api('/settings').then(s=>{document.getElementById('channel').textContent=s.channel;VchVideo.connect(api,s.account)}).catch(e=>document.getElementById('video-status').textContent=e.message);
+document.getElementById('stop-video').onclick=async()=>{await VchVideo.disconnect();document.getElementById('video-status').textContent='Video stopped. You can close this panel.'};
+window.addEventListener('pagehide',()=>VchVideo.disconnect());
+</script></html>

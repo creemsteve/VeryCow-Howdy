@@ -6,6 +6,12 @@ $sources=@(Get-ChildItem src/test/java -Recurse -Filter '*.java' | ForEach-Objec
 & javac --release 17 --add-modules jdk.httpserver -encoding UTF-8 -cp 'build/classes;lib/*' -d build/test-classes @sources
 if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed' }
 $jdk = Split-Path (Split-Path (Get-Command javac).Source -Parent) -Parent
+& (Join-Path $jdk 'bin/java.exe') --add-modules jdk.httpserver -cp 'build/classes;build/test-classes;lib/*' chat.vch.TorTransportTest
+if ($LASTEXITCODE -ne 0) { throw 'Tor-only transport tests failed' }
+& (Join-Path $jdk 'bin/java.exe') --add-modules jdk.httpserver -cp 'build/classes;build/test-classes;lib/*' chat.vch.VoiceRelayTest
+if ($LASTEXITCODE -ne 0) { throw 'Voice relay tests failed' }
+& (Join-Path $jdk 'bin/java.exe') --add-modules jdk.httpserver -cp 'build/classes;build/test-classes;lib/*' chat.vch.VideoRelayTest
+if ($LASTEXITCODE -ne 0) { throw 'Video relay tests failed' }
 & (Join-Path $jdk 'bin/java.exe') -cp 'build/classes;build/test-classes;lib/*' chat.vch.JoinAuthTest
 if ($LASTEXITCODE -ne 0) { throw 'Join protocol tests failed' }
 & (Join-Path $jdk 'bin/java.exe') --add-modules jdk.httpserver -cp 'build/classes;build/test-classes;lib/*' chat.vch.IntegrationTest

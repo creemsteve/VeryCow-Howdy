@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 final class VoicePanel extends JPanel implements AutoCloseable {
     private final DesktopVoice voice;
     private final JButton talk = new JButton("Hold to talk");
+    private final JButton video = new JButton("Video / screen share");
     private final JLabel state = new JLabel("Loading the local DAC model…");
     private final JFrame owner;
     private final KeyEventDispatcher keyboard;
@@ -28,13 +29,18 @@ final class VoicePanel extends JPanel implements AutoCloseable {
         add(title, BorderLayout.NORTH); add(state, BorderLayout.CENTER);
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0)); talk.setEnabled(false); actions.add(talk);
         actions.add(new JLabel("Hold " + core.state.pttKey + " · switch windows to mute"));
+        video.setEnabled(false); actions.add(video);
         actions.add(Theme.button("Leave", leave)); add(actions, BorderLayout.SOUTH);
         voice = new DesktopVoice(core, server, channel, DesktopVoice.models(), audio, update -> SwingUtilities.invokeLater(() -> {
             if (closed) return;
-            talk.setEnabled(update.ready()); talk.setText(update.transmitting() ? "Speaking · release to mute" : "Hold to talk");
+            talk.setEnabled(update.ready()); video.setEnabled(update.ready()); talk.setText(update.transmitting() ? "Speaking · release to mute" : "Hold to talk");
             talk.setBackground(update.transmitting() ? new Color(25, 128, 56) : UIManager.getColor("Button.background"));
-            state.setText(update.message() + " · " + update.connected() + "/" + update.participants() + " peers connected");
+            state.setText(update.message() + " · " + update.connected() + "/" + update.participants() + " participants via server");
         }));
+        video.addActionListener(event -> {
+            try { Desktop.getDesktop().browse(this.voice.videoUri()); }
+            catch(Exception e) { JOptionPane.showMessageDialog(owner,e.getMessage(),"Video unavailable",JOptionPane.ERROR_MESSAGE); }
+        });
         talk.addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) { if (SwingUtilities.isLeftMouseButton(e) && talk.isEnabled()) voice.press(); }
             public void mouseReleased(MouseEvent e) { voice.release(); }

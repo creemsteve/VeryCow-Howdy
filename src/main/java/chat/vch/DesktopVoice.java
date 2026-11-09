@@ -8,12 +8,13 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.Consumer;
 
-/** In-process desktop voice: Java Sound, local DAC and native WebRTC data channels. */
+/** In-process desktop voice: Java Sound, local DAC and an authenticated HTTPS relay. */
 final class DesktopVoice implements AutoCloseable {
     record State(boolean ready, boolean transmitting, int connected, int participants, String message) {}
     private final VoiceSession session;
     private final VoiceAudio audio;
-    private final String account, microphone, speakers, ice;
+    private VoiceBridge videoBridge;
+    private final String account, microphone, speakers;
     private final int inputGain, outputGain;
     private final Consumer<State> listener;
     private final ScheduledExecutorService control = Executors.newSingleThreadScheduledExecutor(daemon("vch-voice-control"));
@@ -27,7 +28,6 @@ final class DesktopVoice implements AutoCloseable {
     private volatile boolean ready, pressed, transmitting;
     private volatile String floor = "";
     private volatile long leaseAt;
-    private VoiceTransport transport;
     private int participants;
     private volatile int connected;
 
@@ -39,12 +39,18 @@ final class DesktopVoice implements AutoCloseable {
     DesktopVoice(ClientCore core, SavedServer server, Channel channel, Path models, VoiceAudio audio, Consumer<State> listener) {
         session = new VoiceSession(core, server, channel, models); this.audio = audio; this.listener = listener;
         account = core.account(server); microphone = core.state.microphone; speakers = core.state.speakers;
-        inputGain = core.state.inputGain; outputGain = core.state.outputGain; ice = core.state.iceUrls;
+        inputGain = core.state.inputGain; outputGain = core.state.outputGain;
     }
 
     static Path models() throws Exception {
         Path app = Path.of(DesktopVoice.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toAbsolutePath().getParent();
         return Path.of(System.getProperty("vch.models", Files.exists(app.resolve("models/dac.json")) ? app.resolve("models").toString() : "build/models"));
+    }
+
+    synchronized java.net.URI videoUri() throws Exception {
+        if(closed.get())throw new java.io.IOException("Voice session ended");
+        if(videoBridge==null)videoBridge=new VoiceBridge(session);
+        return videoBridge.videoUri();
     }
 
     void start() {
@@ -57,10 +63,6 @@ final class DesktopVoice implements AutoCloseable {
                     audio.open(microphone, speakers);
                 }
                 if (closed.get()) return;
-                transport = new VoiceTransport(ice, (id, data) -> {
-                    try { signal(Json.obj("action", "signal", "to", id, "data", data)); }
-                    catch (Exception e) { fail(e); }
-                }, this::receive, this::dispatch);
                 ready = true;
                 Thread capture = daemon("vch-voice-capture").newThread(this::capture); capture.start();
                 heartbeat();
@@ -114,12 +116,11 @@ final class DesktopVoice implements AutoCloseable {
         floor = Json.str(state, "floor"); leaseAt = System.nanoTime();
         if (!floor.equals(account) && transmitting) stopLocal();
         Set<String> members = new HashSet<>(); for (JsonElement id : state.getAsJsonArray("peers")) members.add(id.getAsString());
-        participants = members.size(); transport.update(members, account);
-        for (JsonElement item : state.getAsJsonArray("signals")) {
-            JsonObject entry = item.getAsJsonObject(); String from = Json.str(entry, "from");
-            if (members.contains(from)) transport.accept(from, entry.getAsJsonObject("data"));
+        participants = members.size(); connected = participants;
+        for (JsonElement item : state.getAsJsonArray("frames")) {
+            JsonObject envelope = item.getAsJsonObject(); String from = Json.str(envelope, "author");
+            if (members.contains(from)) receive(from, Json.bytes(envelope));
         }
-        connected = transport.connected();
     }
 
     private void capture() {
@@ -132,14 +133,18 @@ final class DesktopVoice implements AutoCloseable {
                 if (!encoding.compareAndSet(false, true)) continue;
                 byte[] pcm = VoiceAudio.toFloat(block, length, inputGain);
                 try { codec.execute(() -> {
+                    boolean queued = false;
                     try {
                         if (!canSend(ticket)) return;
                         byte[] envelope = Json.bytes(session.request("/encode", Json.obj("data", Crypto.b64(pcm))));
                         dispatch(() -> {
-                            if (canSend(ticket)) try { transport.send(envelope); } catch (Exception e) { fail(e); }
+                            try { if (canSend(ticket)) session.request("/media", Json.obj("envelope", Json.parse(envelope))); }
+                            catch (Exception e) { fail(e); }
+                            finally { encoding.set(false); }
                         });
+                        queued = true;
                     } catch (Exception e) { if (canSend(ticket)) fail(e); }
-                    finally { encoding.set(false); }
+                    finally { if (!queued) encoding.set(false); }
                 }); } catch (RejectedExecutionException busy) { encoding.set(false); }
             } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
             catch (Exception e) { if (!closed.get()) fail(e); break; }
@@ -166,7 +171,7 @@ final class DesktopVoice implements AutoCloseable {
     private void dispatch(Runnable task) {
         if (closed.get()) return;
         try { control.execute(() -> { if (!closed.get()) task.run(); }); }
-        catch (RejectedExecutionException stopped) { /* Late native callback after leave. */ }
+        catch (RejectedExecutionException stopped) { /* Late codec callback after leave. */ }
     }
 
     private void publish(String message) {
@@ -182,12 +187,13 @@ final class DesktopVoice implements AutoCloseable {
         if (!closed.compareAndSet(false, true)) return;
         ready = false; pressed = false; stopLocal();
         // Stop physical devices immediately; queued network/model cleanup stays off Swing's event thread.
+        synchronized(this){if(videoBridge!=null)videoBridge.close();}
         audio.close(); codec.shutdownNow(); playback.shutdownNow();
         control.execute(() -> {
-            try { if (transport != null) transport.close(); }
-            finally {
+            try {
                 session.close();
                 session.whenClosed().whenComplete((ignored, error) -> stopped.complete(null));
+            } finally {
                 control.shutdown();
             }
         });

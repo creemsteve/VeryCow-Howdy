@@ -19,7 +19,7 @@ public final class ChatServer implements AutoCloseable {
     private record Session(String account, String ip, long expires) {}
     private record Presence(String channel, long expires) {}
     private record Floor(String account, long expires) {}
-    private record Signal(String from, String channel, JsonObject data, long expires) {}
+    private record VoiceFrame(Envelope envelope, long cursor, long expires) {}
     private final Map<String,Challenge> challenges = new HashMap<>();
     private final Map<String,AuthenticatedJoin> authenticatedJoins = new HashMap<>();
     private final JoinAttemptLimiter joinAttempts;
@@ -27,7 +27,10 @@ public final class ChatServer implements AutoCloseable {
     private final Map<String,Session> sessions = new HashMap<>();
     private final Map<String,Presence> presence = new HashMap<>();
     private final Map<String,Floor> floors = new HashMap<>();
-    private final Map<String,List<Signal>> signals = new HashMap<>();
+    // Live ciphertext only: bounded per channel, never part of ServerState or the vault.
+    private final Map<String,Deque<VoiceFrame>> voiceFrames = new HashMap<>();
+    private long voiceCursor;
+    private final VideoRelay video = new VideoRelay();
     private final Map<String,Presence> typing = new HashMap<>();
     private final Map<String,CallInvite> calls = new HashMap<>();
     private final Map<String,Long> lastSend = new HashMap<>();
@@ -54,7 +57,7 @@ public final class ChatServer implements AutoCloseable {
             boolean replacing=state.passwordVerifier!=null;
             byte[] salt = Crypto.random(16); state.passwordSalt = Crypto.b64(salt); state.passwordVerifier = Crypto.b64(Crypto.passwordKey(password, salt));
             if(replacing)rotateAllChannelKeys();save();
-            sessions.clear();
+            sessions.clear(); presence.clear(); floors.clear(); voiceFrames.clear(); video.clear();
             challenges.clear(); authenticatedJoins.values().forEach(j -> Arrays.fill(j.key,(byte)0));authenticatedJoins.clear();
         } finally { Arrays.fill(password, '\0'); }
     }
@@ -136,7 +139,7 @@ public final class ChatServer implements AutoCloseable {
         String ip = x.getRemoteAddress().getAddress().getHostAddress(), path = x.getRequestURI().getPath(); long now = System.currentTimeMillis();
         cleanup(now);
         if (state.bannedIps.contains(ip)) throw new Failure(403, "Address banned");
-        rate(ip, 1200, now);
+        if(!path.equals("/api/voice")&&!path.equals("/api/video"))rate(ip, 1200, now);
         if (path.equals("/api/challenge")) {
             if(admission==null||!admission.equals(pendingAdmissions.get(ip)))throw new Failure(429,"A newer join attempt replaced this request; try again in 10 seconds",10);
             if (challenges.size() > 2048) throw new Failure(503, "Try again later");
@@ -179,7 +182,7 @@ public final class ChatServer implements AutoCloseable {
         }
         String authorization = x.getRequestHeaders().getFirst("Authorization");
         Session s = sessions.get(authorization == null ? "" : authorization.replaceFirst("^Bearer ", ""));
-        if (s == null || !s.ip.equals(ip)) throw new Failure(401, "Reconnect to the server");
+        if (s == null || !s.ip.equals(ip)) { if(path.equals("/api/voice")||path.equals("/api/video"))rate(ip,1200,now);throw new Failure(401, "Reconnect to the server"); }
         if (state.bannedHashes.contains(s.account)) throw new Failure(403, "Account banned");
         switch (path) {
             case "/api/poll": {
@@ -227,7 +230,7 @@ public final class ChatServer implements AutoCloseable {
                     if(existing==null)throw new Failure(404,"Friend unavailable");
                     calls.values().removeIf(call->call.channel.equals(existing.voiceChannel));state.friendships.remove(existing);state.channels.removeIf(c->c.id.equals(existing.textChannel)||c.id.equals(existing.voiceChannel));
                     state.channelKeys.remove(existing.textChannel);state.channelKeys.remove(existing.voiceChannel);
-                    presence.remove(s.account);presence.remove(target);floors.remove(existing.voiceChannel);signals.remove(s.account);signals.remove(target);
+                    leaveVoice(s.account);leaveVoice(target);voiceFrames.remove(existing.voiceChannel);
                 } else throw new Failure(400,"Unknown friend action");
                 save();return Json.obj("ok",true);
             }
@@ -309,25 +312,48 @@ public final class ChatServer implements AutoCloseable {
                 m.sequence = state.nextSequence++; state.messages.add(m); lastSend.put(throttle, now);
                 if (state.messages.size() > 10000) state.messages.remove(0); save(); return Json.obj("ok", true, "sequence", m.sequence);
             }
+            case "/api/video": {
+                rate("video/"+s.account,2400,now);
+                Channel c = channel(Json.str(in,"channel"),s.account,"voice");
+                Presence p = presence.get(s.account);
+                if(!permits(c,s.account,"connect")||p==null||!p.channel.equals(c.id))throw new Failure(403,"Join voice before using video");
+                try { return video.request(s.account,c,state,in,now); }
+                catch(VideoRelay.Rejected e) { throw new Failure(e.status,e.getMessage()); }
+            }
             case "/api/voice": {
+                // Voice traffic is budgeted per authenticated account, including users sharing a Tor exit.
+                rate("voice-control/"+s.account,600,now);
                 Channel c = channel(Json.str(in, "channel"), s.account, "voice"); String action = Json.str(in, "action");
                 if(!permits(c,s.account,"connect")) throw new Failure(403,"Voice access is not permitted");
-                if (action.equals("leave")) { presence.remove(s.account); floors.entrySet().removeIf(e -> e.getValue().account.equals(s.account)); signals.remove(s.account); return Json.obj("ok", true); }
+                if (action.equals("leave")) { Presence p=presence.get(s.account);if(p!=null&&p.channel.equals(c.id))leaveVoice(s.account);return Json.obj("ok", true); }
+                if (action.equals("media")) {
+                    Presence p=presence.get(s.account);Floor f=floors.get(c.id);
+                    if(p==null||!p.channel.equals(c.id)||f==null||!f.account.equals(s.account))throw new Failure(403,"Push-to-talk floor unavailable");
+                    Envelope e=Json.GSON.fromJson(in.get("envelope"),Envelope.class);
+                    if(e==null||e.id==null||!e.id.matches("[a-f0-9-]{36}")||!state.id.equals(e.server)||!c.id.equals(e.channel)||!s.account.equals(e.author)
+                        ||!"voice".equals(e.kind)||e.cipher==null||e.cipher.length()>48000||e.signature==null||e.signature.length()>10000
+                        ||e.time<now-12000||e.time>now+12000||!Crypto.verify(state.accounts.get(s.account).publicKey,e.signedBytes(),e.signature))throw new Failure(400,"Invalid voice frame");
+                    if(e.keyRevision!=state.channelKeys.get(c.id).revision)throw new Failure(409,"Voice encryption changed; refresh the channel key");
+                    Deque<VoiceFrame> frames=voiceFrames.computeIfAbsent(c.id,k->new ArrayDeque<>());
+                    if(frames.stream().anyMatch(frame->frame.envelope.id.equals(e.id)))return Json.obj("ok",true);
+                    rate("voice/"+s.account,240,now);
+                    if(frames.size()==6)frames.removeFirst();frames.addLast(new VoiceFrame(e,++voiceCursor,now+3000));
+                    return Json.obj("ok",true);
+                }
+                if(!Set.of("join","heartbeat","claim","release").contains(action))throw new Failure(400,"Update clients to use server-relayed voice");
                 long count = presence.entrySet().stream().filter(e -> e.getValue().channel.equals(c.id) && !e.getKey().equals(s.account)).count();
                 if (count >= c.maxMembers) throw new Failure(409, "Voice channel is full");
+                Presence previous=presence.get(s.account);boolean joined=previous!=null&&previous.channel.equals(c.id);
+                if(!joined)leaveVoice(s.account);
                 presence.put(s.account, new Presence(c.id, now + 10000)); Floor floor = floors.get(c.id);
                 if (action.equals("claim") && (floor == null || floor.account.equals(s.account))) { floor = new Floor(s.account, now + 3500); floors.put(c.id, floor); }
-                if (action.equals("release") && floor != null && floor.account.equals(s.account)) { floors.remove(c.id); floor = null; }
-                if (action.equals("signal")) {
-                    String to = Json.str(in, "to"); Presence target = presence.get(to);
-                    if (target == null || !target.channel.equals(c.id) || !canView(c,to) || !permits(c,to,"connect")) throw new Failure(404, "Peer left");
-                    JsonObject data = in.getAsJsonObject("data"); if (Json.bytes(data).length > 32000) throw new Failure(413, "Signal too large");
-                    List<Signal> q = signals.computeIfAbsent(to, k -> new ArrayList<>());
-                    if (q.size() > 100) throw new Failure(429, "Signal queue full"); q.add(new Signal(s.account, c.id, data, now + 15000));
-                }
+                if (action.equals("release") && floor != null && floor.account.equals(s.account)) { floors.remove(c.id); voiceFrames.remove(c.id);floor = null; }
                 List<String> peers = presence.entrySet().stream().filter(e -> e.getValue().channel.equals(c.id) && !e.getKey().equals(s.account)).map(Map.Entry::getKey).toList();
-                List<Signal> inbox = action.equals("signal") ? null : signals.remove(s.account);
-                return Json.obj("peers", peers, "signals", inbox == null ? List.of() : inbox.stream().filter(e -> e.channel.equals(c.id)).toList(),
+                long after=joined?Json.num(in,"after",-1):-1;String speaker=floor==null?"":floor.account;
+                List<Envelope> frames=voiceFrames.getOrDefault(c.id,new ArrayDeque<>()).stream()
+                    .filter(f->after>=0&&f.cursor>after&&!f.envelope.author.equals(s.account)&&f.envelope.author.equals(speaker)&&f.envelope.keyRevision==state.channelKeys.get(c.id).revision)
+                    .map(VoiceFrame::envelope).toList();
+                return Json.obj("transport","https-relay-v1","peers", peers, "frames",frames,"cursor",voiceCursor,
                     "floor", floor == null ? "" : floor.account, "bitRate", c.bitRate,"channelKeys",keysFor(List.of(c)));
             }
             default: throw new Failure(404, "Unknown endpoint");
@@ -344,15 +370,20 @@ public final class ChatServer implements AutoCloseable {
         challenges.values().removeIf(c -> c.expires < now); sessions.values().removeIf(s -> s.expires < now);
         authenticatedJoins.values().removeIf(j->{if(j.expires>=now)return false;Arrays.fill(j.key,(byte)0);return true;});
         calls.values().removeIf(call->call.expires < now);
-        presence.values().removeIf(p -> p.expires < now); floors.values().removeIf(f -> f.expires < now);
-        signals.values().forEach(q -> q.removeIf(e -> e.expires < now)); signals.values().removeIf(List::isEmpty);
+        for(String account:new ArrayList<>(presence.keySet())){
+            Presence p=presence.get(account);Channel c=state.channels.stream().filter(ch->ch.id.equals(p.channel)).findFirst().orElse(null);
+            if(p.expires<now||c==null||!canView(c,account)||!permits(c,account,"connect")||sessions.values().stream().noneMatch(s->s.account.equals(account)))leaveVoice(account);
+        }
+        video.cleanup(now);
+        floors.values().removeIf(f -> f.expires < now);
+        voiceFrames.entrySet().removeIf(entry->{Floor f=floors.get(entry.getKey());if(f==null)return true;entry.getValue().removeIf(frame->frame.expires<now||!frame.envelope.author.equals(f.account));return entry.getValue().isEmpty();});
         rates.values().removeIf(r -> now - r[0] > 120000);
     }
     public synchronized void ban(String value, boolean ip) throws Exception {
         Set<String> affected=new HashSet<>();sessions.values().stream().filter(s->ip?s.ip.equals(value):s.account.equals(value)).forEach(s->affected.add(s.account));if(!ip)affected.add(value);
         (ip ? state.bannedIps : state.bannedHashes).add(value);rotateAllChannelKeys();save();
         sessions.entrySet().removeIf(e -> ip ? e.getValue().ip.equals(value) : e.getValue().account.equals(value));
-        calls.values().removeIf(call->affected.contains(call.from)||affected.contains(call.to));presence.keySet().removeIf(affected::contains);floors.values().removeIf(f->affected.contains(f.account));signals.keySet().removeIf(affected::contains); log.accept("Ban added");
+        calls.values().removeIf(call->affected.contains(call.from)||affected.contains(call.to));affected.forEach(this::leaveVoice); log.accept("Ban added");
     }
     private void admitJoin(String ip)throws Failure{
         int wait=joinAttempts.acquire(ip);if(wait>0)throw new Failure(429,"Wait "+wait+" seconds before trying to join again",wait);
@@ -360,6 +391,7 @@ public final class ChatServer implements AutoCloseable {
         pendingAdmissions.remove(ip);challenges.values().removeIf(c->c.ip.equals(ip));
         authenticatedJoins.values().removeIf(j->{if(!j.ip.equals(ip))return false;Arrays.fill(j.key,(byte)0);return true;});
     }
-    public synchronized void close() { if (http != null) { http.stop(0); http = null; workers.shutdownNow(); sessions.clear(); presence.clear(); floors.clear(); signals.clear(); calls.clear(); challenges.clear();authenticatedJoins.values().forEach(j->Arrays.fill(j.key,(byte)0));authenticatedJoins.clear(); log.accept("Server stopped"); } }
+    private void leaveVoice(String account){video.leave(account);presence.remove(account);floors.entrySet().removeIf(e->{if(!e.getValue().account.equals(account))return false;voiceFrames.remove(e.getKey());return true;});}
+    public synchronized void close() { if (http != null) { http.stop(0); http = null; workers.shutdownNow(); sessions.clear(); presence.clear(); floors.clear(); voiceFrames.clear(); video.clear(); calls.clear(); challenges.clear();authenticatedJoins.values().forEach(j->Arrays.fill(j.key,(byte)0));authenticatedJoins.clear(); log.accept("Server stopped"); } }
     private static final class Failure extends Exception { final int code,retryAfter; Failure(int code, String message) { this(code,message,0); } Failure(int code,String message,int retryAfter){super(message);this.code=code;this.retryAfter=retryAfter;} }
 }
